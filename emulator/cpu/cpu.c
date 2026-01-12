@@ -2,11 +2,6 @@
 
 // CPU state (registers, flags)
 
-#define FLAG_Z 0x80
-#define FLAG_N 0x40
-#define FLAG_H 0x20
-#define FLAG_C 0x10
-
 typedef struct {
 	uint8_t a;
 	uint8_t b;
