@@ -116,5 +116,12 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
 }
 
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
+  for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
+    block_t* block = mmu->blocks[i];
 
+    if (address >= block->start && address <= block->end) {
+      uint16_t rel_addr = address - block->start;
+      block->buf[rel_addr] = data;
+    }
+  }
 }
