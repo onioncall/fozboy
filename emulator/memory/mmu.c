@@ -76,7 +76,7 @@ mmu_t* mmu_create() {
   mmu->blocks[MMU_WRAM_SWITCH] = new_block(0xD000, 0xDFFF, NULL);
   if (!mmu->blocks[MMU_WRAM_SWITCH]) goto cleanup;
 
-  mmu->blocks[MMU_ECHO_RAM] = new_block(0x1E00, 0xE000, mmu->blocks[MMU_WRAM]->buf);
+  mmu->blocks[MMU_ECHO_RAM] = new_block(0xE000, 0xFDFF, mmu->blocks[MMU_WRAM]->buf);
   if (!mmu->blocks[MMU_ECHO_RAM]) goto cleanup;
 
   mmu->blocks[MMU_OAM] = new_block(0xFE00, 0xFE9F, NULL);
@@ -101,3 +101,20 @@ cleanup:
   return NULL;
 }
 
+
+uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
+  for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
+    block_t* block = mmu->blocks[i];
+
+    if (address >= block->start && address <= block->end) {
+      uint16_t rel_addr = address - block->start;
+
+      return block->buf[rel_addr];
+    }
+  }
+  return 0xFF; // unmapped
+}
+
+void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
+
+}
