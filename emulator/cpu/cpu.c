@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 
 // CPU state (registers, flags)
@@ -13,6 +14,8 @@ typedef struct {
 	uint8_t l;
 	uint16_t sp; // Stack Pointer
 	uint16_t pc; // Program Counter
+	bool ime;    // Interrupt Master Enable
+	bool halted; // Halt State
 } Cpu;
 
 void cpu_init(Cpu *cpu) {
@@ -22,7 +25,10 @@ void cpu_init(Cpu *cpu) {
 	cpu->d = 0;
 	cpu->e = 0;
 	cpu->f = 0;
+	cpu->h = 0;
 	cpu->l = 0;
 	cpu->sp = 0;
 	cpu->pc = 0;
+	cpu->ime = false;
+	cpu->halted = false;
 }

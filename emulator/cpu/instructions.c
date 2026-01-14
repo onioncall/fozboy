@@ -22,7 +22,7 @@ static void update_zero_flag(uint8_t *flags, uint8_t result) {
 // If our instruction is a subtract, we set the negative flag.
 static void update_negative_flag(uint8_t *flags) { *flags |= FLAG_N; }
 
-// If there is an overflow with an arithmatic instruction, we set the carry
+// If there is an overflow with an arithmetic instruction, we set the carry
 // flag. Claude tells me this is not the standard way to do this, but I'm
 // choosing not to care because I find it easier to understand. These could be 8
 // bit, but then we need an identical function that takes 16 bit parameters for
@@ -253,7 +253,7 @@ void execute_scf(uint8_t *flags) {
 }
 
 // Rotate-left-carry instruction, sets flags z00c
-void execute_rlc(uint8_t *dest, uint8_t *flags) {
+void execute_rlc(uint8_t *dest, uint8_t *flags, bool update_z) {
 	// The & 1 here is ensuring that we have a 0 or a 1. Not sure why this is
 	// convention. We are moving bit 7 to bit 1, and saving the value.
 	uint8_t bit7 = (*dest >> 7) & 1;
@@ -265,7 +265,9 @@ void execute_rlc(uint8_t *dest, uint8_t *flags) {
 	*dest |= bit7;
 
 	*flags = 0;
-	update_zero_flag(flags, *dest);
+	if (update_z) {
+		update_zero_flag(flags, *dest);
+	}
 	// if bit seven has a value, we want to set the carry flag
 	if (bit7) {
 		*flags |= FLAG_C;
@@ -274,14 +276,16 @@ void execute_rlc(uint8_t *dest, uint8_t *flags) {
 
 // Rotate-left instruction, sets flags z00c
 // Old Carry value gets set to bit0
-void execute_rl(uint8_t *dest, uint8_t *flags) {
+void execute_rl(uint8_t *dest, uint8_t *flags, bool update_z) {
 	uint8_t bit7 = (*dest >> 7) & 1;
 	*dest <<= 1;
 	uint8_t carry_value = (*flags & FLAG_C) ? 1 : 0;
 	*dest |= carry_value;
 
 	*flags = 0;
-	update_zero_flag(flags, *dest);
+	if (update_z) {
+		update_zero_flag(flags, *dest);
+	}
 	// if bit seven has a value, we want to set the carry flag
 	if (bit7) {
 		*flags |= FLAG_C;
@@ -289,31 +293,117 @@ void execute_rl(uint8_t *dest, uint8_t *flags) {
 }
 
 // Rotate-right-carry instruction, sets flags z00c
-void execute_rrc(uint8_t *dest, uint8_t *flags) {
+void execute_rrc(uint8_t *dest, uint8_t *flags, bool update_z) {
 	uint8_t bit0 = *dest & 1;
 	*dest >>= 1;
 	*dest |= (bit0 << 7);
 
 	*flags = 0;
-	update_zero_flag(flags, *dest);
+	if (update_z) {
+		update_zero_flag(flags, *dest);
+	}
 	if (bit0) {
 		*flags |= FLAG_C;
 	}
 }
 
-// Rotate-right instruction, sets flags z00c
+// Rotate-right instruction, sets flags z00c or 000z for certain a register ops
 // Old Carry value gets set to bit7
-void execute_rr(uint8_t *dest, uint8_t *flags) {
+void execute_rr(uint8_t *dest, uint8_t *flags, bool update_z) {
 	uint8_t bit0 = *dest & 1;
 	*dest >>= 1;
 	uint8_t carry_value = (*flags & FLAG_C) ? 1 : 0;
 	*dest |= (carry_value << 7);
 
 	*flags = 0;
+	if (update_z) {
+		update_zero_flag(flags, *dest);
+	}
+	if (bit0) {
+		*flags |= FLAG_C;
+	}
+}
+
+// Shift-left-arithmetic, sets flags to z00c or 000z for certain a register ops
+// This is a rotation, except for we don't restore the end value with the carry
+void execute_sla(uint8_t *dest, uint8_t *flags) {
+	uint8_t bit7 = (*dest >> 7) & 1;
+	*dest <<= 1;
+
+	*flags = 0;
+	update_zero_flag(flags, *dest);
+	if (bit7) {
+		*flags |= FLAG_C;
+	}
+}
+
+// Shift-right-arithmetic, sets flags to z00c or 000z for certain a register ops
+void execute_sra(uint8_t *dest, uint8_t *flags) {
+	uint8_t bit7 = (*dest >> 7) & 1;
+	uint8_t bit0 = *dest & 1;
+	*dest >>= 1;
+	// we need to keep the "sign" of bit 7 regardless of the rotation
+	*dest |= (bit7 << 7);
+
+	*flags = 0;
 	update_zero_flag(flags, *dest);
 	if (bit0) {
 		*flags |= FLAG_C;
 	}
 }
+
+// Shift-right-logical, sets flags to z00c
+void execute_srl(uint8_t *dest, uint8_t *flags) {
+	uint8_t bit0 = *dest & 1;
+	*dest >>= 1;
+
+	*flags = 0;
+	update_zero_flag(flags, *dest);
+	if (bit0) {
+		*flags |= FLAG_C;
+	}
+}
+
+// Swaps upper and lower nibbles (bits 7-4 ↔ bits 3-0)
+// Sets flags to z000
+void execute_swap(uint8_t *dest, uint8_t *flags) {
+	uint8_t upper = (*dest >> 4); // Get upper nibble, move to lower
+	uint8_t lower = (*dest << 4); // Get lower nibble, move to upper
+	*dest = upper | lower;
+
+	*flags = 0;
+	update_zero_flag(flags, *dest);
+}
+
+// I don't know why this instruction is just called bit. This just checks if the
+// bit at a certain location is 1 or 0, Sets flags to z01-
+void execute_bit(uint8_t bit_num, uint8_t val, uint8_t *flags) {
+	uint8_t bit = (val >> bit_num) & 1;
+	*flags &= FLAG_C;
+
+	if (bit == 0) {
+		*flags |= FLAG_Z;
+	}
+
+	*flags |= FLAG_H;
+}
+
+// Set at a certain location is 1 or 0, Sets flags to ----
+void execute_set(uint8_t bit_num, uint8_t *dest) { *dest |= (1 << bit_num); }
+
+// Reset at a certain location is 1 or 0, Sets flags to ----
+void execute_res(uint8_t bit_num, uint8_t *dest) { *dest &= ~(1 << bit_num); }
+
+// Disable interrups
+void execute_di(bool *ime) { *ime = false; }
+
+// Enable interrups
+void execute_ei(bool *ime) { *ime = true; }
+
+// Halt, apparently there is also a stop that is basically not used?
+void execute_halt(bool *halt) { *halt = true; }
+
+// Jump
+void execute_jp_hl(uint16_t *pc, uint16_t hl) { *pc = hl; }
 
 void execute_nop(void) {};

@@ -4,10 +4,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Flag bit definitions
 #define FLAG_Z 0x80
 #define FLAG_N 0x40
 #define FLAG_H 0x20
 #define FLAG_C 0x10
+
+// Data transfer
+void execute_load(uint8_t *dest, uint8_t src);
 
 // 8-bit arithmetic
 void execute_add(uint8_t *dest, uint8_t val, uint8_t *flags);
@@ -34,13 +38,31 @@ void execute_ccf(uint8_t *flags);
 void execute_scf(uint8_t *flags);
 
 // Rotation operations
-void execute_rlc(uint8_t *dest, uint8_t *flags);
-void execute_rl(uint8_t *dest, uint8_t *flags);
-void execute_rrc(uint8_t *dest, uint8_t *flags);
-void execute_rr(uint8_t *dest, uint8_t *flags);
+void execute_rlc(uint8_t *dest, uint8_t *flags, bool update_z);
+void execute_rl(uint8_t *dest, uint8_t *flags, bool update_z);
+void execute_rrc(uint8_t *dest, uint8_t *flags, bool update_z);
+void execute_rr(uint8_t *dest, uint8_t *flags, bool update_z);
 
-// Data transfer
-void execute_load(uint8_t *dest, uint8_t src);
+// Shift operations
+void execute_sla(uint8_t *dest, uint8_t *flags);
+void execute_sra(uint8_t *dest, uint8_t *flags);
+void execute_srl(uint8_t *dest, uint8_t *flags);
+
+// Nibble swap
+void execute_swap(uint8_t *dest, uint8_t *flags);
+
+// Bit operations
+void execute_bit(uint8_t bit_num, uint8_t val, uint8_t *flags);
+void execute_set(uint8_t bit_num, uint8_t *dest);
+void execute_res(uint8_t bit_num, uint8_t *dest);
+
+// Control flow
+void execute_jp_hl(uint16_t *pc, uint16_t hl);
+
+// CPU control
+void execute_di(bool *ime);
+void execute_ei(bool *ime);
+void execute_halt(bool *halt);
 
 // Misc
 void execute_nop(void);
