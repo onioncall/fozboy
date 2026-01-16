@@ -21,16 +21,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Add C source files to the module (not needed for Zig projects)
-    lib_module.addCSourceFile(.{
-        .file = b.path("emulator/gbc.c"),
-        .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
-    });
+    const core_c_files = [_][] const u8{ 
+        "emulator/gbc.c",
+        "emulator/cpu/cpu.c",
+        "emulator/memory/mmu.c",
+        "emulator/io/loader.c"
+    };
 
-    lib_module.addCSourceFile(.{
-        .file = b.path("emulator/cpu/cpu.c"),
-        .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
-    });
+    // Add C source files to the module (not needed for Zig projects)
+    for (core_c_files) |file_name| {
+        lib_module.addCSourceFile(.{
+            .file = b.path(file_name),
+            .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
+        });
+    }
 
     lib_module.addIncludePath(b.path("emulator"));
 
