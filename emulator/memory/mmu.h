@@ -2,6 +2,7 @@
 #define MMU_H
 
 #include <stdint.h>
+#include "rom.h"
 
 typedef struct {
   uint8_t* buf;
@@ -43,5 +44,13 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address);
 // Write to virtualized gb memory bank
 // Addresses will be the same as on the original GB hardware
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data);
+
+// Write the fixed length first block of rom to memory
+void write_rom_fixed(mmu_t* mmu, rom_t* rom_full);
+
+// Switch to another switchable rom bank in memory
+// bank: 2-512
+// Returns -1 if bank is invalid or if bank would exceed the size of rom_full
+int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank);
 
 #endif
