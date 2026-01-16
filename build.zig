@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         "emulator/gbc.c",
         "emulator/cpu/cpu.c",
         "emulator/memory/mmu.c",
-        "emulator/io/loader.c"
+        "emulator/memory/rom.c"
     };
 
     // Add C source files to the module (not needed for Zig projects)
