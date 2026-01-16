@@ -20,3 +20,17 @@ uint8_t load_rom(rom_t* rom, char* file_name) {
   fclose(file);
   return 0;
 }
+
+void rom_destroy(rom_t* rom) {
+  free(rom->data);
+}
+
+rom_t* rom_create(char* file_name) {
+  rom_t* rom = malloc(sizeof(rom_t));
+  if (load_rom(rom, file_name) < 0) {
+    free(rom);
+    return NULL;
+  }
+
+  return rom;
+}

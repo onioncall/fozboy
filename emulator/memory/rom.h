@@ -1,7 +1,7 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include "mmu.h"
+#include <stdint.h>
 
 typedef struct {
   uint8_t* data;
