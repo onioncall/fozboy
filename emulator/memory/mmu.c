@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "mmu.h"
+#include "rom.h"
 
 // If buf not provided, will be allocated
 block_t* new_block(uint16_t start, uint16_t end, uint8_t* buf) {
@@ -124,4 +126,27 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
       block->buf[rel_addr] = data;
     }
   }
+}
+
+void write_rom_fixed(mmu_t* mmu, rom_t* rom_full) {
+  block_t* block = mmu->blocks[MMU_ROM_FIXED];
+
+  uint16_t cpy_len = block->len;
+  if (rom_full->size < cpy_len) {
+    cpy_len = rom_full->size;
+  }
+
+  memcpy(block->buf, rom_full->data, cpy_len);
+}
+
+int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank) {
+  block_t* block = mmu->blocks[MMU_ROM_SWITCH];
+
+  if (bank < 2 || bank > 512) { return -1; }
+
+  long address = bank * block->len;
+  if (address >= rom_full->size) { return -1; }
+
+  memcpy(block->buf, &rom_full->data[address], block->len);
+  return 0;
 }
