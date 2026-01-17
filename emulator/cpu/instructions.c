@@ -1,4 +1,5 @@
 #include "instructions.h"
+#include "../memory/mmu.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -80,6 +81,9 @@ static void update_half_flag_16(uint8_t *flags, uint16_t dest, uint16_t val,
 
 // Load instruction, sets flags ----
 void execute_load(uint8_t *dest, uint8_t src) { *dest = src; };
+
+// 16 bit load instruction
+void execute_ld_16(uint16_t *dest, uint16_t src) { *dest = src; }
 
 // Add instruction, sets flags Z0HC
 void execute_add(uint8_t *dest, uint8_t val, uint8_t *flags) {
@@ -404,6 +408,109 @@ void execute_ei(bool *ime) { *ime = true; }
 void execute_halt(bool *halt) { *halt = true; }
 
 // Jump
-void execute_jp_hl(uint16_t *pc, uint16_t hl) { *pc = hl; }
+void execute_jp(uint16_t *pc, uint16_t address) { *pc = address; }
+
+// Relative Jump, these can move backwards so we need this to be a signed int
+void execute_jr(uint16_t *pc, int8_t offset) { *pc += offset; }
 
 void execute_nop(void) {};
+
+// Memory Instructions
+
+// Load memory to register
+void execute_ld_mem(uint8_t *dest, uint16_t address, mmu_t *mmu) {
+	*dest = mmu_read(mmu, address);
+}
+
+// Store register data in memory
+void execute_st_mem(uint8_t value, uint16_t address, mmu_t *mmu) {
+	mmu_write(mmu, address, value);
+}
+
+// Store register data in memory with increment
+void execute_sti_mem(uint8_t value, uint16_t *address, mmu_t *mmu) {
+	mmu_write(mmu, *address, value);
+	(*address)++;
+}
+
+// Store register data in memory with decrement
+void execute_std_mem(uint8_t value, uint16_t *address, mmu_t *mmu) {
+	mmu_write(mmu, *address, value);
+	(*address)--;
+}
+
+// Load memory to register, then increment address
+void execute_ldi_mem(uint8_t *dest, uint16_t *address, mmu_t *mmu) {
+	*dest = mmu_read(mmu, *address);
+	(*address)++;
+}
+
+// Load memory to register, then decrement address
+void execute_ldd_mem(uint8_t *dest, uint16_t *address, mmu_t *mmu) {
+	*dest = mmu_read(mmu, *address);
+	(*address)--;
+}
+
+// Push data onto stack using the stack-pointer
+void execute_push(uint16_t *value, uint16_t *sp_addr, mmu_t *mmu) {
+	uint8_t low_addr = *value;
+	uint8_t high_addr = (*value >> 8);
+
+	(*sp_addr)--;
+	mmu_write(mmu, *sp_addr, high_addr);
+
+	(*sp_addr)--;
+	mmu_write(mmu, *sp_addr, low_addr);
+}
+
+// Push data off the stack using the stack-pointer, also can be used for RET
+// instruction
+void execute_pop(uint16_t *value, uint16_t *sp_addr, mmu_t *mmu) {
+	uint8_t low_addr = mmu_read(mmu, *sp_addr);
+	(*sp_addr)++;
+
+	uint8_t high_addr = mmu_read(mmu, *sp_addr);
+	(*sp_addr)++;
+
+	*value = (high_addr << 8) | low_addr;
+}
+
+// Call pushes pc onto stack, then jump to address, also can be used for RST n
+void execute_call(uint16_t *pc, uint16_t *sp, uint16_t address, mmu_t *mmu) {
+	execute_push(pc, sp, mmu);
+	execute_jp(pc, address);
+}
+
+// Return from interupt just pops the pc onto the stack, and then sets the ime
+// flag
+void execute_reti(uint16_t *pc, uint16_t *sp, bool *ime, mmu_t *mmu) {
+	execute_pop(pc, sp, mmu);
+	*ime = true;
+}
+
+// Decimal adjust accumulator, used for decimal arithmetic
+void execute_daa(uint8_t *a, uint8_t *flags) {
+	uint8_t adjustment = 0;
+
+	if (*flags & FLAG_N) {
+		if (*flags & FLAG_H) {
+			adjustment += 0x06;
+		}
+		if (*flags & FLAG_C) {
+			adjustment += 0x60;
+		}
+		*a -= adjustment;
+	} else {
+		if ((*flags & FLAG_H) || ((*a & 0x0F) > 0x09)) {
+			adjustment += 0x06;
+		}
+		if ((*flags & FLAG_C) || *a > 0x99) {
+			adjustment += 0x60;
+			*flags |= FLAG_C;
+		}
+		*a += adjustment;
+	}
+
+	update_zero_flag(flags, *a);
+	*flags &= ~FLAG_H;
+}
