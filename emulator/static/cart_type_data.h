@@ -24,11 +24,18 @@ typedef struct {
   uint8_t codes_len;
 } cart_type_data_item;
 
-extern const cart_type_data_item CART_TYPE_MAP[];
-extern const uint8_t CODES_RAM[];
-extern const uint8_t CODES_BATT[];
-extern const uint8_t CODES_TIMER[];
-extern const uint8_t CODES_RUMBLE[];
-extern const uint8_t CODES_SENSOR[];
+const uint8_t CART_TYPE_MAP_LEN = 12;
+extern const cart_type_data_item CART_TYPE_MAP[CART_TYPE_MAP_LEN];
+
+const uint8_t CODES_RAM_LEN = 15;
+extern const uint8_t CODES_RAM[CODES_RAM_LEN];
+const uint8_t CODES_BATT_LEN = 11;
+extern const uint8_t CODES_BATT[CODES_BATT_LEN];
+const uint8_t CODES_TIMER_LEN = 2;
+extern const uint8_t CODES_TIMER[CODES_TIMER_LEN];
+const uint8_t CODES_RUMBLE_LEN = 4;
+extern const uint8_t CODES_RUMBLE[CODES_RUMBLE_LEN];
+const uint8_t CODES_SENSOR_LEN = 1;
+extern const uint8_t CODES_SENSOR[CODES_SENSOR_LEN];
 
 #endif
