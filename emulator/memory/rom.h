@@ -12,6 +12,7 @@ typedef struct {
   long size;
   cart_type_enum cart_type;
   char* program_title;
+  uint8_t mode;
   bool is_ram;
   bool is_batt;
   bool is_timer;
