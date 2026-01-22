@@ -103,6 +103,8 @@ mbc_t* mbc_create(rom_t* rom) {
   mbc->rom = rom;
 
   switch (rom->cart_type) {
+  case ROM:
+    mbc->intercept = &rom_intercept;
   case MBC1:
     mbc->regs->bank1 = 0b00001;
     mbc->intercept = &mbc1_intercept;
