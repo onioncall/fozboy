@@ -28,7 +28,7 @@ typedef struct {
 typedef struct mbc_t {
   mbc_regs_t* regs;
   rom_t* rom;
-  void(*intercept)(struct mbc_t* self, uint16_t addr, uint8_t data);
+  intercept_flags_t(*intercept)(struct mbc_t* self, uint16_t addr, uint8_t data);
 } mbc_t;
 
 mbc_t* mbc_create(rom_t* rom);
