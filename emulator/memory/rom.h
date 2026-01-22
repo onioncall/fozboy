@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "../static/cart_type_data.h"
 
-const uint16_t CART_TYPE_ADDR = 0x0147;
+#define CART_TYPE_ADDR 0x0147
 
 typedef struct {
   uint8_t* data;

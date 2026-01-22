@@ -17,10 +17,19 @@ uint8_t CODES_HUC3[] = { 0xFE };
 uint8_t CODES_HUC1[] = { 0xFF };
 
 const uint8_t CODES_RAM[] = { 0x02, 0x03, 0x08, 0x09, 0x0C, 0x0D, 0x10, 0x12, 0x13, 0x1A,0x1B, 0x1D, 0x1E, 0x22, 0xFF };
+const uint8_t CODES_RAM_LEN = 15;
+
 const uint8_t CODES_BATT[] = { 0x03, 0x06, 0x09, 0x0D, 0x0F, 0x10, 0x13, 0x1B, 0x1E, 0x22, 0xFF };
+const uint8_t CODES_BATT_LEN = 11;
+
 const uint8_t CODES_TIMER[] = { 0x0F, 0x10 };
+const uint8_t CODES_TIMER_LEN = 2;
+
 const uint8_t CODES_RUMBLE[] = { 0x1C, 0x1D, 0x1E, 0x22 };
+const uint8_t CODES_RUMBLE_LEN = 4;
+
 const uint8_t CODES_SENSOR[] = { 0x22 };
+const uint8_t CODES_SENSOR_LEN = 1;
 
 const cart_type_data_item CART_TYPE_MAP[] = {
   {
@@ -84,4 +93,6 @@ const cart_type_data_item CART_TYPE_MAP[] = {
     .codes_len = sizeof(CODES_HUC1) / sizeof(CODES_HUC1[0])
   }
 };
+
+const uint8_t CART_TYPE_MAP_LEN = 12;
 
