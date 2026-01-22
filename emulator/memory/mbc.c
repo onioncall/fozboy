@@ -49,6 +49,48 @@ intercept_flags_t mbc1_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
   return flags;
 }
 
+intercept_flags_t rom_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // Nothing to do
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mbc2_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mmm01_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mbc3_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mbc5_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mbc6_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
+intercept_flags_t mbc7_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  // TODO
+  intercept_flags_t ret = {0};
+  return ret;
+}
+
 void mbc_destroy(mbc_t* mbc) {
   free(mbc->regs);
   free(mbc);
@@ -60,10 +102,35 @@ mbc_t* mbc_create(rom_t* rom) {
   mbc->regs = regs;
   mbc->rom = rom;
 
-  if (rom->cart_type == MBC1) {
+  switch (rom->cart_type) {
+  case MBC1:
     mbc->regs->bank1 = 0b00001;
     mbc->intercept = &mbc1_intercept;
+    break;
+  case MBC2:
+    mbc->intercept = &mbc2_intercept;
+    break;
+  case MBC3:
+    mbc->intercept = &mbc3_intercept;
+    break;
+  case MBC5:
+    mbc->intercept = &mbc5_intercept;
+    break;
+  case MBC6:
+    mbc->intercept = &mbc6_intercept;
+    break;
+  case MBC7:
+    mbc->intercept = &mbc7_intercept;
+    break;
+  case MMM01:
+    mbc->intercept = &mmm01_intercept;
+    break;
+  default:
+    // TODO return error?
+    // Not going to support pocket_cam, bandai_tama5, huc3, huc1, at least for now
+    break;
   }
+
 
   return mbc;
 }
