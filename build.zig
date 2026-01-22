@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const core_c_files = [_][] const u8{ 
+    const core_c_files = [_][]const u8{
         "emulator/gbc.c",
         "emulator/cpu/cpu.c",
         "emulator/memory/mmu.c",
@@ -55,4 +55,30 @@ pub fn build(b: *std.Build) void {
     // This is C-specific. This only needs to be done for files we are exposing to go.
     const install_main_header = b.addInstallFile(b.path("emulator/gbc.h"), "include/gbc.h");
     b.getInstallStep().dependOn(&install_main_header.step);
+
+    // Unit tests
+    const test_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("emulator/memory/mbc.test.zig"),
+    });
+
+    // Add C source files needed for testing
+    for (core_c_files) |file_name| {
+        test_module.addCSourceFile(.{
+            .file = b.path(file_name),
+            .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
+        });
+    }
+
+    test_module.addIncludePath(b.path("emulator"));
+
+    const test_exe = b.addTest(.{
+        .root_module = test_module,
+    });
+    test_exe.linkLibC();
+
+    const run_test = b.addRunArtifact(test_exe);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_test.step);
 }
