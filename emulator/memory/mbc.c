@@ -1,40 +1,52 @@
 
 #include <stdlib.h>
-#include <string.h>
 #include "mbc.h"
 #include "rom.h"
 
-void mbc1_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  memset(self->flags, 0, sizeof(intercept_flags_t));
-  self->regs->bank1 = 0b00001;
+intercept_flags_t mbc1_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
+  intercept_flags_t flags = {0};
+  if (addr > 0x7FFF) { return flags; }
+  flags.mbc = true;
 
-  if (addr > 0x7FFF) { return; }
+  mbc_regs_t* regs = self->regs;
 
   if (addr < 0x2000) {
-    self->flags->set_ram_gate = true;
-    self->flags->ram_gate_enabled = (data & 0xF) == 0b1010;
+    flags.set_ram_gate = true;
+    flags.ram_gate_enabled = (data & 0xF) == 0b1010;
   } 
   else if (addr < 0x4000) {
-    self->flags->set_switch_bank = true;
-    uint8_t bank_rg_1 = data & 0x1F;
-    bank_rg_1 = bank_rg_1 == 0 ? 1 : bank_rg_1;
-    uint8_t bank_rg_2 = self->regs->bank2 & 0x3;
-    self->flags->switch_bank = (bank_rg_2 << 5) | bank_rg_1;
+    // BANK1 register - 5 bit
+    regs->bank1 = data & 0x1F;
+    // MBC1 does not allow 0 in bank1 register and will treat 0 as 1
+    regs->bank1 = regs->bank1 == 0 ? 1 : regs->bank1;
+
+    flags.set_switch_bank = true;
+    flags.switch_bank = (regs->bank2 << 5) | regs->bank1;
   } 
   else if (addr < 0x6000) {
-    self->flags->set_switch_bank = true;
-    uint8_t bank_rg_2 = data & 0x3;
-    uint8_t bank_rg_1 = self->regs->bank1 & 0x1F;
-    self->flags->switch_bank = (bank_rg_2 << 5) | bank_rg_1;
+    // BANK2 register - 2 bit
+    regs->bank2 = data & 0x3;
 
-    if (self->rom->mode == 1) {
-      self->flags->set_fixed_bank = true;
-      self->flags->fixed_bank = bank_rg_2 << 5;
+    flags.set_switch_bank = true;
+    flags.switch_bank = (regs->bank2 << 5) | regs->bank1;
+
+    // fixed rom is switchable on bank2 register in mode 1
+    if (self->regs->mode == 1) {
+      flags.set_fixed_bank = true;
+      flags.fixed_bank = regs->bank2 << 5;
     }
   } 
   else {
-    self->rom->mode = data;
+    self->regs->mode = data;
+
+    // fixed rom is switchable on bank2 register in mode 1
+    if (data == 1) {
+      flags.set_fixed_bank = true;
+      flags.fixed_bank = regs->bank2 << 5;
+    }
   }
+
+  return flags;
 }
 
 void mbc_destroy(mbc_t* mbc) {
