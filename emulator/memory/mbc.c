@@ -56,21 +56,63 @@ intercept_flags_t rom_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
 }
 
 intercept_flags_t mbc2_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  // TODO
+  // Unsupported
   intercept_flags_t ret = {0};
   return ret;
 }
 
 intercept_flags_t mmm01_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  // TODO
+  // Unsupported
   intercept_flags_t ret = {0};
   return ret;
 }
 
 intercept_flags_t mbc3_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  // TODO
-  intercept_flags_t ret = {0};
-  return ret;
+  intercept_flags_t flags = {0};
+  if (addr > 0x7FFF) { return flags; }
+  flags.mbc = true;
+
+  mbc_regs_t* regs = self->regs;
+
+  if (addr < 0x2000) {
+    flags.set_ram_gate = true;
+    flags.set_timer = true;
+    flags.ram_gate_enabled = (data & 0xFF) == 0x0A; // $0A turns timer and ram on, $00 turns it off
+    flags.timer_enabled = flags.ram_gate_enabled;
+  } 
+  else if (addr < 0x4000) {
+    // single 7-bit register
+    regs->bank1 = data & 0x7F;
+    // MBC3 does not allow 0 in rom bank register
+    regs->bank1 = regs->bank1 == 0 ? 1 : regs->bank1;
+
+    flags.set_switch_bank = true;
+    flags.switch_bank = (regs->bank2 << 5) | regs->bank1;
+  } 
+  else if (addr < 0x6000) {
+    // BANK2 register - 2 bit
+    regs->bank2 = data & 0x3;
+
+    flags.set_switch_bank = true;
+    flags.switch_bank = regs->bank1;
+
+    // fixed rom is switchable on bank2 register in mode 1
+    if (self->regs->mode == 1) {
+      flags.set_fixed_bank = true;
+      flags.fixed_bank = regs->bank2 << 5;
+    }
+  } 
+  else {
+    self->regs->mode = data;
+
+    // fixed rom is switchable on bank2 register in mode 1
+    if (data == 1) {
+      flags.set_fixed_bank = true;
+      flags.fixed_bank = regs->bank2 << 5;
+    }
+  }
+
+  return flags;
 }
 
 intercept_flags_t mbc5_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
@@ -80,13 +122,13 @@ intercept_flags_t mbc5_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
 }
 
 intercept_flags_t mbc6_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  // TODO
+  // unsupported
   intercept_flags_t ret = {0};
   return ret;
 }
 
 intercept_flags_t mbc7_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
-  // TODO
+  // unsupported
   intercept_flags_t ret = {0};
   return ret;
 }
