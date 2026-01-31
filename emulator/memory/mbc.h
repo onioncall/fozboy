@@ -14,17 +14,24 @@ typedef struct {
   uint16_t fixed_bank;
   bool set_ram_gate;
   bool ram_gate_enabled;
+  bool set_ram_bank;
+  uint16_t ram_bank;
   bool set_timer;
   bool timer_enabled;
+  bool set_rtc_select;
+  uint8_t rtc_register;
+  bool latch_rtc;
 } intercept_flags_t;
 
 // These are the hardware registers for the mbc, 
-// unlike flags, these will persist across virtual clock cycles.
 typedef struct {
   uint8_t ramg;
   uint8_t bank1;
   uint8_t bank2;
+  uint8_t bank3;
   uint8_t mode;
+  uint8_t rtc_register;
+  uint8_t latch_clock;
 } mbc_regs_t;
 
 typedef struct mbc_t {
