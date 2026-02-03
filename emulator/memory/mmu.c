@@ -102,6 +102,23 @@ mmu_t* mmu_create(rom_t* rom) {
   mmu->mbc = mbc_create(rom);
   if (!mmu->mbc) goto cleanup;
 
+  // Initialize RAM state
+  mmu->ram_enabled = false;
+  mmu->current_ram_bank = 0;
+  
+  // Initialize RTC state (all registers start at 0)
+  mmu->timer_enabled = false;
+  mmu->rtc_s = 0;
+  mmu->rtc_m = 0;
+  mmu->rtc_h = 0;
+  mmu->rtc_dl = 0;
+  mmu->rtc_dh = 0;
+  mmu->rtc_s_latched = 0;
+  mmu->rtc_m_latched = 0;
+  mmu->rtc_h_latched = 0;
+  mmu->rtc_dl_latched = 0;
+  mmu->rtc_dh_latched = 0;
+
   return mmu;
 
 cleanup:
@@ -111,6 +128,28 @@ cleanup:
 
 
 uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
+  // Special handling for external RAM region (0xA000-0xBFFF)
+  if (address >= 0xA000 && address <= 0xBFFF) {
+    // Check if RAM is enabled
+    if (!mmu->ram_enabled) {
+      return 0xFF; // Reading disabled RAM returns 0xFF
+    }
+    
+    // Check if an RTC register is selected (MBC3 only)
+    if (mmu->mbc->regs->rtc_register >= 0x08 && mmu->mbc->regs->rtc_register <= 0x0C) {
+      // Return latched RTC register value
+      switch (mmu->mbc->regs->rtc_register) {
+        case 0x08: return mmu->rtc_s_latched;
+        case 0x09: return mmu->rtc_m_latched;
+        case 0x0A: return mmu->rtc_h_latched;
+        case 0x0B: return mmu->rtc_dl_latched;
+        case 0x0C: return mmu->rtc_dh_latched;
+      }
+    }
+    
+    // Otherwise fall through to normal RAM read
+  }
+  
   for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
     block_t* block = mmu->blocks[i];
 
@@ -124,6 +163,28 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
 }
 
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
+  // Special handling for external RAM region (0xA000-0xBFFF)
+  if (address >= 0xA000 && address <= 0xBFFF) {
+    // Check if RAM/Timer is enabled
+    if (!mmu->ram_enabled && !mmu->timer_enabled) {
+      return; // Writes to disabled RAM are ignored
+    }
+    
+    // Check if an RTC register is selected (MBC3 only)
+    if (mmu->mbc->regs->rtc_register >= 0x08 && mmu->mbc->regs->rtc_register <= 0x0C) {
+      // Write to RTC register
+      switch (mmu->mbc->regs->rtc_register) {
+        case 0x08: mmu->rtc_s = data; return;
+        case 0x09: mmu->rtc_m = data; return;
+        case 0x0A: mmu->rtc_h = data; return;
+        case 0x0B: mmu->rtc_dl = data; return;
+        case 0x0C: mmu->rtc_dh = data; return;
+      }
+    }
+    
+    // Otherwise fall through to normal RAM write
+  }
+  
   for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
     block_t* block = mmu->blocks[i];
 
@@ -158,6 +219,21 @@ int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom) {
   return 0;
 }
 
+int switch_ram(mmu_t* mmu, uint16_t bank) {
+  // RAM banking is not needed if the cart doesn't have RAM
+  if (!mmu->mbc->rom->is_ram) { return -1; }
+  
+  // Update the current RAM bank
+  mmu->current_ram_bank = bank;
+  
+  // Note: In a full implementation, you would swap the actual RAM bank data here
+  // For now, we just track which bank is active. The actual bank switching
+  // would require external RAM storage (typically in a separate array of banks)
+  // that gets loaded from battery save files.
+  
+  return 0;
+}
+
 int mbc_intercept(mmu_t* mmu, rom_t* rom_full, mbc_t* mbc, uint16_t addr, uint8_t data) {
   intercept_flags_t flags = mbc->intercept(mbc, addr, data);
 
@@ -168,19 +244,25 @@ int mbc_intercept(mmu_t* mmu, rom_t* rom_full, mbc_t* mbc, uint16_t addr, uint8_
     switch_rom(mmu, rom_full, flags.fixed_bank, 1);
   }
   if (flags.set_ram_gate) {
-    // TODO
+    mmu->ram_enabled = flags.ram_gate_enabled;
   }
   if (flags.set_ram_bank) {
-    // TODO 
+    switch_ram(mmu, flags.ram_bank);
   }
   if (flags.set_timer) {
-    // TODO 
+    mmu->timer_enabled = flags.timer_enabled;
   }
   if (flags.set_rtc_select) {
-    // TODO 
+    // RTC register selection is already stored in mbc->regs->rtc_register
+    // This will be used during reads/writes to the external RAM region
   }
   if (flags.latch_rtc) {
-    // TODO 
+    // Latch current RTC values into the latched registers
+    mmu->rtc_s_latched = mmu->rtc_s;
+    mmu->rtc_m_latched = mmu->rtc_m;
+    mmu->rtc_h_latched = mmu->rtc_h;
+    mmu->rtc_dl_latched = mmu->rtc_dl;
+    mmu->rtc_dh_latched = mmu->rtc_dh;
   }
 
   return flags.mbc;
