@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "rom.h"
+#include "mbc.h"
 
 typedef struct {
   uint8_t* buf;
@@ -29,13 +30,14 @@ typedef enum {
 
 typedef struct {
   block_t* blocks[MMU_BLOCK_COUNT];
+  mbc_t* mbc;
 } mmu_t;
 
 // Cleans up all memory blocks allocated for mmu
 void mmu_destroy(mmu_t* mmu);
 
 // Creates new mmu with all blocks allocated
-mmu_t* mmu_create();
+mmu_t* mmu_create(rom_t* rom);
 
 // Read from virtualized gb memory bank
 // Addresses will be the same as on the original GB hardware
@@ -51,6 +53,6 @@ void write_rom_fixed(mmu_t* mmu, rom_t* rom_full);
 // Switch to another switchable rom bank in memory
 // bank: 2-512
 // Returns -1 if bank is invalid or if bank would exceed the size of rom_full
-int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank);
+int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom);
 
 #endif

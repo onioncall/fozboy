@@ -5,6 +5,7 @@
 #include <string.h>
 #include "mmu.h"
 #include "rom.h"
+#include "mbc.h"
 
 // If buf not provided, will be allocated
 block_t* new_block(uint16_t start, uint16_t end, uint8_t* buf) {
@@ -40,6 +41,8 @@ void block_destroy(block_t* block) {
 }
 
 void mmu_destroy(mmu_t* mmu) {
+  mbc_destroy(mmu->mbc);
+
   block_destroy(mmu->blocks[MMU_ROM_FIXED]);
   block_destroy(mmu->blocks[MMU_ROM_SWITCH]);
   block_destroy(mmu->blocks[MMU_VRAM]);
@@ -56,7 +59,7 @@ void mmu_destroy(mmu_t* mmu) {
   free(mmu);
 }
 
-mmu_t* mmu_create() {
+mmu_t* mmu_create(rom_t* rom) {
   mmu_t* mmu = calloc(1, sizeof(mmu_t));
   if (!mmu) return NULL;
 
@@ -95,6 +98,9 @@ mmu_t* mmu_create() {
 
   mmu->blocks[MMU_INT_ENABLE] = new_block(0xFFFF, 0xFFFF, NULL);
   if (!mmu->blocks[MMU_INT_ENABLE]) goto cleanup;
+
+  mmu->mbc = mbc_create(rom);
+  if (!mmu->mbc) goto cleanup;
 
   return mmu;
 
@@ -139,7 +145,8 @@ void write_rom_fixed(mmu_t* mmu, rom_t* rom_full) {
   memcpy(block->buf, rom_full->data, cpy_len);
 }
 
-int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank) {
+int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom) {
+  mmu_region_t block_key = fixed_rom ? MMU_ROM_FIXED : MMU_ROM_SWITCH;
   block_t* block = mmu->blocks[MMU_ROM_SWITCH];
 
   if (bank < 2 || bank > 512) { return -1; }
@@ -149,4 +156,32 @@ int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank) {
 
   memcpy(block->buf, &rom_full->data[address], block->len);
   return 0;
+}
+
+int mbc_intercept(mmu_t* mmu, rom_t* rom_full, mbc_t* mbc, uint16_t addr, uint8_t data) {
+  intercept_flags_t flags = mbc->intercept(mbc, addr, data);
+
+  if (flags.set_switch_bank) {
+    switch_rom(mmu, rom_full, flags.switch_bank, 0);
+  }
+  if (flags.set_fixed_bank) {
+    switch_rom(mmu, rom_full, flags.fixed_bank, 1);
+  }
+  if (flags.set_ram_gate) {
+    // TODO
+  }
+  if (flags.set_ram_bank) {
+    // TODO 
+  }
+  if (flags.set_timer) {
+    // TODO 
+  }
+  if (flags.set_rtc_select) {
+    // TODO 
+  }
+  if (flags.latch_rtc) {
+    // TODO 
+  }
+
+  return flags.mbc;
 }
