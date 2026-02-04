@@ -21,11 +21,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const core_c_files = [_][] const u8{ 
+    const core_c_files = [_][]const u8{
         "emulator/gbc.c",
         "emulator/cpu/cpu.c",
         "emulator/memory/mmu.c",
         "emulator/memory/rom.c",
+        "emulator/memory/mbc.c",
         "emulator/static/cart_type_data.c",
     };
 
@@ -54,4 +55,49 @@ pub fn build(b: *std.Build) void {
     // This is C-specific. This only needs to be done for files we are exposing to go.
     const install_main_header = b.addInstallFile(b.path("emulator/gbc.h"), "include/gbc.h");
     b.getInstallStep().dependOn(&install_main_header.step);
+
+    // Unit tests
+    const mbc_test_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("emulator/memory/mbc.test.zig"),
+    });
+
+    const mmu_test_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("emulator/memory/mmu.test.zig"),
+    });
+
+    // Add C source files needed for testing
+    for (core_c_files) |file_name| {
+        mbc_test_module.addCSourceFile(.{
+            .file = b.path(file_name),
+            .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
+        });
+        mmu_test_module.addCSourceFile(.{
+            .file = b.path(file_name),
+            .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
+        });
+    }
+
+    mbc_test_module.addIncludePath(b.path("emulator"));
+    mmu_test_module.addIncludePath(b.path("emulator"));
+
+    const mbc_test_exe = b.addTest(.{
+        .root_module = mbc_test_module,
+    });
+    const mmu_test_exe = b.addTest(.{
+        .root_module = mmu_test_module,
+    });
+
+    mbc_test_exe.linkLibC();
+    mmu_test_exe.linkLibC();
+
+    const run_mbc_test = b.addRunArtifact(mbc_test_exe);
+    const run_mmu_test = b.addRunArtifact(mmu_test_exe);
+
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_mbc_test.step);
+    test_step.dependOn(&run_mmu_test.step);
 }
