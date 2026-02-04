@@ -18,8 +18,6 @@ typedef struct {
   uint16_t ram_bank;
   bool set_timer;
   bool timer_enabled;
-  bool set_rtc_select;
-  uint8_t rtc_register;
   bool latch_rtc;
 } intercept_flags_t;
 

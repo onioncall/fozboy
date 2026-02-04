@@ -102,11 +102,9 @@ mmu_t* mmu_create(rom_t* rom) {
   mmu->mbc = mbc_create(rom);
   if (!mmu->mbc) goto cleanup;
 
-  // Initialize RAM state
   mmu->ram_enabled = false;
   mmu->current_ram_bank = 0;
   
-  // Initialize RTC state (all registers start at 0)
   mmu->timer_enabled = false;
   mmu->rtc_s = 0;
   mmu->rtc_m = 0;
@@ -128,11 +126,11 @@ cleanup:
 
 
 uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
-  // Special handling for external RAM region (0xA000-0xBFFF)
+  
+  // Special handling for external RAM region
   if (address >= 0xA000 && address <= 0xBFFF) {
-    // Check if RAM is enabled
     if (!mmu->ram_enabled) {
-      return 0xFF; // Reading disabled RAM returns 0xFF
+      return 0xFF;
     }
     
     // Check if an RTC register is selected (MBC3 only)
@@ -146,10 +144,9 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
         case 0x0C: return mmu->rtc_dh_latched;
       }
     }
-    
-    // Otherwise fall through to normal RAM read
   }
   
+  // identify block to read from and read
   for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
     block_t* block = mmu->blocks[i];
 
@@ -163,11 +160,11 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
 }
 
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
-  // Special handling for external RAM region (0xA000-0xBFFF)
+  
+  // Special handling for external RAM region
   if (address >= 0xA000 && address <= 0xBFFF) {
-    // Check if RAM/Timer is enabled
     if (!mmu->ram_enabled && !mmu->timer_enabled) {
-      return; // Writes to disabled RAM are ignored
+      return;
     }
     
     // Check if an RTC register is selected (MBC3 only)
@@ -181,10 +178,9 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
         case 0x0C: mmu->rtc_dh = data; return;
       }
     }
-    
-    // Otherwise fall through to normal RAM write
   }
   
+  // identify block to write to and write
   for (int i = 0; i < MMU_BLOCK_COUNT; i++) {
     block_t* block = mmu->blocks[i];
 
@@ -220,17 +216,13 @@ int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom) {
 }
 
 int switch_ram(mmu_t* mmu, uint16_t bank) {
-  // RAM banking is not needed if the cart doesn't have RAM
   if (!mmu->mbc->rom->is_ram) { return -1; }
   
-  // Update the current RAM bank
   mmu->current_ram_bank = bank;
   
-  // Note: In a full implementation, you would swap the actual RAM bank data here
-  // For now, we just track which bank is active. The actual bank switching
-  // would require external RAM storage (typically in a separate array of banks)
-  // that gets loaded from battery save files.
-  
+  // TODO - swap between actual RAM banks here
+  // - these ram banks will be used in .sav files
+  // - variable number of banks for different cart types
   return 0;
 }
 
@@ -252,12 +244,9 @@ int mbc_intercept(mmu_t* mmu, rom_t* rom_full, mbc_t* mbc, uint16_t addr, uint8_
   if (flags.set_timer) {
     mmu->timer_enabled = flags.timer_enabled;
   }
-  if (flags.set_rtc_select) {
-    // RTC register selection is already stored in mbc->regs->rtc_register
-    // This will be used during reads/writes to the external RAM region
-  }
   if (flags.latch_rtc) {
-    // Latch current RTC values into the latched registers
+    // Freeze the clock in place
+    // this is done in case the clock tics between reads of s, m, h, etc
     mmu->rtc_s_latched = mmu->rtc_s;
     mmu->rtc_m_latched = mmu->rtc_m;
     mmu->rtc_h_latched = mmu->rtc_h;

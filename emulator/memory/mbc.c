@@ -106,8 +106,6 @@ intercept_flags_t mbc3_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
       // 0x0B = RTC DL (day counter lower 8 bits)
       // 0x0C = RTC DH (day counter upper 1 bit + flags)
       regs->rtc_register = data;
-      flags.set_rtc_select = true;
-      flags.rtc_register = data;
     }
   } 
   else {
@@ -176,6 +174,7 @@ intercept_flags_t mbc7_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
 }
 
 void mbc_destroy(mbc_t* mbc) {
+  if (!mbc) return;
   free(mbc->regs);
   free(mbc);
 }
