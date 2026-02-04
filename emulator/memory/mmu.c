@@ -40,6 +40,12 @@ void block_destroy(block_t* block) {
   free(block);
 }
 
+// Special destroy for blocks that share buffers (don't free the buffer)
+void block_destroy_no_buf_free(block_t* block) {
+  if (!block) return;
+  free(block); // Only free the block struct, not the buffer
+}
+
 void mmu_destroy(mmu_t* mmu) {
   mbc_destroy(mmu->mbc);
 
@@ -49,7 +55,7 @@ void mmu_destroy(mmu_t* mmu) {
   block_destroy(mmu->blocks[MMU_EXT_RAM]);
   block_destroy(mmu->blocks[MMU_WRAM]);
   block_destroy(mmu->blocks[MMU_WRAM_SWITCH]);
-  block_destroy(mmu->blocks[MMU_ECHO_RAM]);
+  block_destroy_no_buf_free(mmu->blocks[MMU_ECHO_RAM]); // Shares buffer with WRAM
   block_destroy(mmu->blocks[MMU_OAM]);
   block_destroy(mmu->blocks[MMU_UNUSABLE]);
   block_destroy(mmu->blocks[MMU_IO_REGS]);

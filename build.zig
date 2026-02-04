@@ -57,28 +57,47 @@ pub fn build(b: *std.Build) void {
     b.getInstallStep().dependOn(&install_main_header.step);
 
     // Unit tests
-    const test_module = b.createModule(.{
+    const mbc_test_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
         .root_source_file = b.path("emulator/memory/mbc.test.zig"),
     });
 
+    const mmu_test_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("emulator/memory/mmu.test.zig"),
+    });
+
     // Add C source files needed for testing
     for (core_c_files) |file_name| {
-        test_module.addCSourceFile(.{
+        mbc_test_module.addCSourceFile(.{
+            .file = b.path(file_name),
+            .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
+        });
+        mmu_test_module.addCSourceFile(.{
             .file = b.path(file_name),
             .flags = &.{ "-std=c11", "-fno-sanitize=undefined" },
         });
     }
 
-    test_module.addIncludePath(b.path("emulator"));
+    mbc_test_module.addIncludePath(b.path("emulator"));
+    mmu_test_module.addIncludePath(b.path("emulator"));
 
-    const test_exe = b.addTest(.{
-        .root_module = test_module,
+    const mbc_test_exe = b.addTest(.{
+        .root_module = mbc_test_module,
     });
-    test_exe.linkLibC();
+    const mmu_test_exe = b.addTest(.{
+        .root_module = mmu_test_module,
+    });
 
-    const run_test = b.addRunArtifact(test_exe);
+    mbc_test_exe.linkLibC();
+    mmu_test_exe.linkLibC();
+
+    const run_mbc_test = b.addRunArtifact(mbc_test_exe);
+    const run_mmu_test = b.addRunArtifact(mmu_test_exe);
+
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_test.step);
+    test_step.dependOn(&run_mbc_test.step);
+    test_step.dependOn(&run_mmu_test.step);
 }
