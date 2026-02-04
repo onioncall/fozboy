@@ -123,3 +123,25 @@ test "mbc_create - MBC1 initialization" {
     // MBC1 should initialize BANK1 to 1
     try testing.expect(mbc.*.regs.*.bank1 == 0x01);
 }
+
+test "mbc3_intercept - Rom Bank 0" {
+    var rom = createTestRom(c.MBC3);
+    const mbc = c.mbc_create(&rom);
+    defer c.mbc_destroy(mbc);
+
+    _ = mbc.*.intercept.?(mbc, 0x2000, 0x00);
+
+    try testing.expect(mbc.*.regs.*.bank1 == 0x01);
+}
+
+test "mbc5_intercept - 9 bit bank" {
+    var rom = createTestRom(c.MBC5);
+    const mbc = c.mbc_create(&rom);
+    defer c.mbc_destroy(mbc);
+
+    _ = mbc.*.intercept.?(mbc, 0x2000, 0x00);
+    const flags = mbc.*.intercept.?(mbc, 0x3000, 0x1);
+
+    try testing.expect(flags.set_switch_bank == true);
+    try testing.expect(flags.switch_bank == 0x100);
+}
