@@ -35,12 +35,14 @@ const cart_type_data_item CART_TYPE_MAP[] = {
   {
     .cart_type = ROM,
     .codes = CODES_ROM,
-    .codes_len = sizeof(CODES_ROM) / sizeof(CODES_ROM[0])
+    .codes_len = sizeof(CODES_ROM) / sizeof(CODES_ROM[0]),
+    .ram_banks = 1
   },
   {
     .cart_type = MBC1,
     .codes = CODES_MBC1,
-    .codes_len = sizeof(CODES_MBC1) / sizeof(CODES_MBC1[0])
+    .codes_len = sizeof(CODES_MBC1) / sizeof(CODES_MBC1[0]),
+    .ram_banks = 4
   },
   {
     .cart_type = MBC2,
@@ -55,12 +57,14 @@ const cart_type_data_item CART_TYPE_MAP[] = {
   {
     .cart_type = MBC3,
     .codes = CODES_MBC3,
-    .codes_len = sizeof(CODES_MBC3) / sizeof(CODES_MBC3[0])
+    .codes_len = sizeof(CODES_MBC3) / sizeof(CODES_MBC3[0]),
+    .ram_banks = 8
   },
   { 
     .cart_type = MBC5,
     .codes = CODES_MBC5,
-    .codes_len = sizeof(CODES_MBC5) / sizeof(CODES_MBC5[0])
+    .codes_len = sizeof(CODES_MBC5) / sizeof(CODES_MBC5[0]),
+    .ram_banks = 16
   },
   {
     .cart_type = MBC6,

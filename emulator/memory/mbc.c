@@ -34,15 +34,19 @@ intercept_flags_t mbc1_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
     if (self->regs->mode == 1) {
       flags.set_fixed_bank = true;
       flags.fixed_bank = regs->bank2 << 5;
+      flags.set_ram_bank = true;
+      flags.ram_bank = regs->bank2;
     }
   } 
   else {
-    self->regs->mode = data;
+    self->regs->mode = data & 0x1;
 
     // fixed rom is switchable on bank2 register in mode 1
     if (data == 1) {
       flags.set_fixed_bank = true;
       flags.fixed_bank = regs->bank2 << 5;
+      flags.set_ram_bank = true;
+      flags.ram_bank = regs->bank2;
     }
   }
 
