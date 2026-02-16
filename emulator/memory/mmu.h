@@ -2,8 +2,9 @@
 #define MMU_H
 
 #include <stdint.h>
-#include "rom.h"
+#include "cart.h"
 #include "mbc.h"
+#include "ext_ram.h"
 
 typedef struct {
   uint8_t* buf;
@@ -30,7 +31,7 @@ typedef enum {
 
 typedef struct {
   block_t* blocks[MMU_BLOCK_COUNT];
-  mbc_t* mbc;
+  cart_t* cart;
   
   // External RAM state
   bool ram_enabled;
@@ -56,7 +57,7 @@ typedef struct {
 void mmu_destroy(mmu_t* mmu);
 
 // Creates new mmu with all blocks allocated
-mmu_t* mmu_create(rom_t* rom);
+mmu_t* mmu_create(cart_t* cart);
 
 // Read from virtualized gb memory bank
 // Addresses will be the same as on the original GB hardware
@@ -67,11 +68,11 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address);
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data);
 
 // Write the fixed length first block of rom to memory
-void write_rom_fixed(mmu_t* mmu, rom_t* rom_full);
+void write_rom_fixed(mmu_t* mmu);
 
 // Switch to another switchable rom bank in memory
 // bank: 2-512
-// Returns -1 if bank is invalid or if bank would exceed the size of rom_full
-int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom);
+// Returns -1 if bank is invalid or if bank would exceed the size of cart->data
+int switch_rom(mmu_t* mmu, uint16_t bank, uint8_t fixed_rom);
 
 #endif

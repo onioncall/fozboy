@@ -25,8 +25,8 @@ pub fn build(b: *std.Build) void {
         "emulator/gbc.c",
         "emulator/cpu/cpu.c",
         "emulator/memory/mmu.c",
-        "emulator/memory/rom.c",
-        "emulator/memory/ram.c",
+        "emulator/memory/cart.c",
+        "emulator/memory/ext_ram.c",
         "emulator/memory/mbc.c",
         "emulator/static/cart_type_data.c",
     };

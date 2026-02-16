@@ -2,7 +2,8 @@
 #define MBC_H
 
 #include <stdint.h>
-#include "rom.h"
+#include <stdbool.h>
+#include "../static/cart_type_data.h"
 
 // These flags will be set by the mbc intercept functions
 // They are effectively commands for the caller
@@ -34,11 +35,11 @@ typedef struct {
 
 typedef struct mbc_t {
   mbc_regs_t* regs;
-  rom_t* rom;
+  cart_type_enum cart_type;
   intercept_flags_t(*intercept)(struct mbc_t* self, uint16_t addr, uint8_t data);
 } mbc_t;
 
-mbc_t* mbc_create(rom_t* rom);
+mbc_t* mbc_create(cart_type_enum cart_type);
 void mbc_destroy(mbc_t* mbc);
 
 #endif

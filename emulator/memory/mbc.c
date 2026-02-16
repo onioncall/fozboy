@@ -1,7 +1,6 @@
 
 #include <stdlib.h>
 #include "mbc.h"
-#include "rom.h"
 
 intercept_flags_t mbc1_intercept(mbc_t* self, uint16_t addr, uint8_t data) {
   intercept_flags_t flags = {0};
@@ -183,15 +182,14 @@ void mbc_destroy(mbc_t* mbc) {
   free(mbc);
 }
 
-mbc_t* mbc_create(rom_t* rom) {
+mbc_t* mbc_create(cart_type_enum cart_type) {
   mbc_t* mbc = calloc(1, sizeof(mbc_t));
   mbc_regs_t* regs = calloc(1, sizeof(mbc_regs_t));
   mbc->regs = regs;
-  mbc->rom = rom;
 
   mbc->regs->latch_clock = 0xFF; // Invalid state for latch sequence
 
-  switch (rom->cart_type) {
+  switch (cart_type) {
   case ROM:
     mbc->intercept = &rom_intercept;
     break;
