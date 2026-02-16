@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mmu.h"
-#include "cart.h"
+#include "../cartridge/cart.h"
 
 // If buf not provided, will be allocated
 block_t* new_block(uint16_t start, uint16_t end, uint8_t* buf) {

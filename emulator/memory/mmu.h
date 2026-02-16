@@ -2,9 +2,7 @@
 #define MMU_H
 
 #include <stdint.h>
-#include "cart.h"
-#include "mbc.h"
-#include "ext_ram.h"
+#include "../cartridge/cart.h"
 
 typedef struct {
   uint8_t* buf;
