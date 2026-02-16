@@ -225,13 +225,15 @@ int switch_rom(mmu_t* mmu, uint16_t bank, uint8_t fixed_rom) {
 }
 
 int switch_ram(mmu_t* mmu, uint16_t bank) {
-  if (!mmu->cart->is_ram) { return -1; }
+  if (!mmu->ram_enabled) { return -1; }
   
   mmu->current_ram_bank = bank;
+
+  uint8_t* ext_ram_buf = get_ram_bank(mmu->cart, mmu->current_ram_bank);
+  mmu->blocks[MMU_EXT_RAM]->buf = ext_ram_buf;
+  // Note - no mem leak here
+  // all ram bank lifecycles are owned by ext_ram module
   
-  // TODO - swap between actual RAM banks here
-  // - these ram banks will be used in .sav files
-  // - variable number of banks for different cart types
   return 0;
 }
 

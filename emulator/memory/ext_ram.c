@@ -39,6 +39,7 @@ ext_ram_t* ext_ram_create(cart_type_enum cart_type) {
   // call ext_ram[bank_num]; to get the desired ram bank
   for (int i = 0; i < ext_ram->num_banks; i++) {
     // calloc for 0 initialization, as carts can freely read/write here
+    // TODO - initialize from stored cartridge state
     ext_ram->banks[i] = calloc(1, RAM_BANK_SIZE);
     if (ext_ram->banks[i] == NULL) {
       ext_ram_destroy(ext_ram);

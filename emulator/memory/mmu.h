@@ -35,7 +35,7 @@ typedef struct {
   
   // External RAM state
   bool ram_enabled;
-  uint16_t current_ram_bank;
+  uint16_t current_ram_bank; // May not be needed
   
   // RTC state (for MBC3)
   bool timer_enabled;
