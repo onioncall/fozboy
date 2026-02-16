@@ -61,7 +61,7 @@ pub fn build(b: *std.Build) void {
     const mbc_test_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("emulator/memory/mbc.test.zig"),
+        .root_source_file = b.path("emulator/cartridge/mbc.test.zig"),
     });
 
     const mmu_test_module = b.createModule(.{

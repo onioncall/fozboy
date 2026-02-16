@@ -46,12 +46,10 @@ void block_destroy_no_buf_free(block_t* block) {
 }
 
 void mmu_destroy(mmu_t* mmu) {
-  cart_destroy(mmu->cart);
-
   block_destroy(mmu->blocks[MMU_ROM_FIXED]);
   block_destroy(mmu->blocks[MMU_ROM_SWITCH]);
   block_destroy(mmu->blocks[MMU_VRAM]);
-  block_destroy(mmu->blocks[MMU_EXT_RAM]);
+  block_destroy_no_buf_free(mmu->blocks[MMU_EXT_RAM]); // Shares buffer with cart ext_ram
   block_destroy(mmu->blocks[MMU_WRAM]);
   block_destroy(mmu->blocks[MMU_WRAM_SWITCH]);
   block_destroy_no_buf_free(mmu->blocks[MMU_ECHO_RAM]); // Shares buffer with WRAM
@@ -67,6 +65,8 @@ void mmu_destroy(mmu_t* mmu) {
 mmu_t* mmu_create(cart_t* cart) {
   mmu_t* mmu = calloc(1, sizeof(mmu_t));
   if (!mmu) return NULL;
+  
+  mmu->cart = cart;
 
   mmu->blocks[MMU_ROM_FIXED] = new_block(0x0000, 0x3FFF, NULL);
   if (!mmu->blocks[MMU_ROM_FIXED]) goto cleanup;

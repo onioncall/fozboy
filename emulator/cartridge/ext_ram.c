@@ -29,7 +29,7 @@ ext_ram_t* ext_ram_create(cart_type_enum cart_type) {
   }
 
   ext_ram->num_banks = CART_TYPE_MAP[cart_type].ram_banks;
-  ext_ram->banks = malloc(sizeof(uint8_t) * ext_ram->num_banks);
+  ext_ram->banks = malloc(sizeof(uint8_t*) * ext_ram->num_banks);
   if (ext_ram->banks == NULL) {
     ext_ram_destroy(ext_ram);
     return NULL;
