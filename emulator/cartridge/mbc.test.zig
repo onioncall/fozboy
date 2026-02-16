@@ -6,16 +6,8 @@ const c = @cImport({
     @cInclude("static/cart_type_data.h");
 });
 
-// Helper function to create a test ROM
-fn createTestCart(cart_type: c.cart_type_enum) c.cart_t {
-    var cart: c.cart_t = std.mem.zeroes(c.cart_t);
-    cart.cart_type = cart_type;
-    return cart;
-}
-
 test "mbc1_intercept - RAM gate enable" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Test RAM gate enable (write 0x0A to address 0x0000-0x1FFF)
@@ -27,8 +19,7 @@ test "mbc1_intercept - RAM gate enable" {
 }
 
 test "mbc1_intercept - RAM gate disable" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Test RAM gate disable (write something other than 0x0A)
@@ -40,8 +31,7 @@ test "mbc1_intercept - RAM gate disable" {
 }
 
 test "mbc1_intercept - BANK1 register write" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Test BANK1 register write (address 0x2000-0x3FFF)
@@ -54,8 +44,7 @@ test "mbc1_intercept - BANK1 register write" {
 }
 
 test "mbc1_intercept - BANK1 register zero handling" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // MBC1 treats 0 as 1 for BANK1 register
@@ -68,8 +57,7 @@ test "mbc1_intercept - BANK1 register zero handling" {
 }
 
 test "mbc1_intercept - BANK2 register write" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Set BANK1 first
@@ -86,8 +74,7 @@ test "mbc1_intercept - BANK2 register write" {
 }
 
 test "mbc1_intercept - mode switch to mode 1" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Set BANK2 first
@@ -103,8 +90,7 @@ test "mbc1_intercept - mode switch to mode 1" {
 }
 
 test "mbc1_intercept - address out of range" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     // Address > 0x7FFF should return empty flags
@@ -114,8 +100,7 @@ test "mbc1_intercept - address out of range" {
 }
 
 test "mbc_create - MBC1 initialization" {
-    var cart = createTestCart(c.MBC1);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC1);
     defer c.mbc_destroy(mbc);
 
     try testing.expect(mbc != null);
@@ -125,8 +110,7 @@ test "mbc_create - MBC1 initialization" {
 }
 
 test "mbc3_intercept - Rom Bank 0" {
-    var cart = createTestCart(c.MBC3);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC3);
     defer c.mbc_destroy(mbc);
 
     _ = mbc.*.intercept.?(mbc, 0x2000, 0x00);
@@ -135,8 +119,7 @@ test "mbc3_intercept - Rom Bank 0" {
 }
 
 test "mbc5_intercept - 9 bit bank" {
-    var cart = createTestCart(c.MBC5);
-    const mbc = c.mbc_create(&cart);
+    const mbc = c.mbc_create(c.MBC5);
     defer c.mbc_destroy(mbc);
 
     _ = mbc.*.intercept.?(mbc, 0x2000, 0x00);
