@@ -117,9 +117,10 @@ cart_t* cart_create(char* file_name) {
 }
 
 uint8_t* get_ram_bank(cart_t* cart, uint8_t bank_num) {
-  if (bank_num > cart->ext_ram->num_banks) {
-    return NULL;
-  }
-
-  return cart->ext_ram->banks[bank_num];
+  // "In most MBCs, if an unmapped RAM bank is selected 
+  // (which would be translate to an out of bounds RAM address 
+  // by the MBC controller), the MBC will simply wrap around 
+  // the internal ram address and would access a valid RAM address."
+  // - https://gbdev.io/pandocs/MBCs.html#mbc-unmapped-ram-bank-access
+  return cart->ext_ram->banks[bank_num % cart->ext_ram->num_banks];
 }
