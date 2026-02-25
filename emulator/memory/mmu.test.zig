@@ -15,7 +15,7 @@ fn createTestCart(cart_type: c.cart_type_enum) c.cart_t {
     cart.data = null; // No actual ROM data needed for these tests
     cart.is_ram = false;
     cart.is_batt = false;
-    cart.ext_ram = c.ext_ram_create(cart_type);
+    cart.ext_ram = c.ext_ram_create(cart_type, null);
     cart.mbc = c.mbc_create(cart_type);
     return cart;
 }

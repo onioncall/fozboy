@@ -107,7 +107,7 @@ cart_t* cart_create(char* file_name) {
     return NULL;
   } 
 
-  cart->ext_ram = ext_ram_create(cart->cart_type);
+  cart->ext_ram = ext_ram_create(cart->cart_type, file_name);
   if (!cart->ext_ram) {
     cart_destroy(cart);
     return NULL;
