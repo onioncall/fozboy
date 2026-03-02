@@ -149,6 +149,7 @@ int snapshot_ram(ext_ram_t *ext_ram) {
 
 int snapshot_ram_throttled(ext_ram_t *ext_ram) {
   if (snapshot_counter++ % SNAPSHOT_RATE == 0) {
+    snapshot_counter = 0;
     return load_snapshot(ext_ram);
   }
   return 0;
