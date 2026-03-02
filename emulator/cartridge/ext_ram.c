@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint16_t RAM_BANK_SIZE = 0xBFFF - 0xA000;
+const uint16_t RAM_BANK_SIZE = 0xBFFF - 0xA000;
+const uint16_t SNAPSHOT_RATE = 512;
+uint16_t snapshot_counter = 0;
 
 int get_snapshot_name(char* rom_file_name, char* buf, uint16_t buf_size) {
   const char* xdg_data_home = getenv("XDG_DATA_HOME");
@@ -142,5 +144,12 @@ int snapshot_ram(ext_ram_t *ext_ram) {
   }
 
   fclose(fptr);
+  return 0;
+}
+
+int snapshot_ram_throttled(ext_ram_t *ext_ram) {
+  if (snapshot_counter++ % SNAPSHOT_RATE == 0) {
+    return load_snapshot(ext_ram);
+  }
   return 0;
 }
