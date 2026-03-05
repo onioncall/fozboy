@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mmu.h"
-#include "rom.h"
-#include "mbc.h"
+#include "../cartridge/cart.h"
 
 // If buf not provided, will be allocated
 block_t* new_block(uint16_t start, uint16_t end, uint8_t* buf) {
@@ -47,12 +46,10 @@ void block_destroy_no_buf_free(block_t* block) {
 }
 
 void mmu_destroy(mmu_t* mmu) {
-  mbc_destroy(mmu->mbc);
-
   block_destroy(mmu->blocks[MMU_ROM_FIXED]);
   block_destroy(mmu->blocks[MMU_ROM_SWITCH]);
   block_destroy(mmu->blocks[MMU_VRAM]);
-  block_destroy(mmu->blocks[MMU_EXT_RAM]);
+  block_destroy_no_buf_free(mmu->blocks[MMU_EXT_RAM]); // Shares buffer with cart ext_ram
   block_destroy(mmu->blocks[MMU_WRAM]);
   block_destroy(mmu->blocks[MMU_WRAM_SWITCH]);
   block_destroy_no_buf_free(mmu->blocks[MMU_ECHO_RAM]); // Shares buffer with WRAM
@@ -65,9 +62,11 @@ void mmu_destroy(mmu_t* mmu) {
   free(mmu);
 }
 
-mmu_t* mmu_create(rom_t* rom) {
+mmu_t* mmu_create(cart_t* cart) {
   mmu_t* mmu = calloc(1, sizeof(mmu_t));
   if (!mmu) return NULL;
+  
+  mmu->cart = cart;
 
   mmu->blocks[MMU_ROM_FIXED] = new_block(0x0000, 0x3FFF, NULL);
   if (!mmu->blocks[MMU_ROM_FIXED]) goto cleanup;
@@ -78,7 +77,9 @@ mmu_t* mmu_create(rom_t* rom) {
   mmu->blocks[MMU_VRAM] = new_block(0x8000, 0x9FFF, NULL);
   if (!mmu->blocks[MMU_VRAM]) goto cleanup;
 
-  mmu->blocks[MMU_EXT_RAM] = new_block(0xA000, 0xBFFF, NULL);
+  uint8_t* ext_ram_buf = get_ram_bank(cart, 0);
+  if (!ext_ram_buf) goto cleanup;
+  mmu->blocks[MMU_EXT_RAM] = new_block(0xA000, 0xBFFF, ext_ram_buf);
   if (!mmu->blocks[MMU_EXT_RAM]) goto cleanup;
 
   mmu->blocks[MMU_WRAM] = new_block(0xC000, 0xCFFF, NULL);
@@ -105,8 +106,6 @@ mmu_t* mmu_create(rom_t* rom) {
   mmu->blocks[MMU_INT_ENABLE] = new_block(0xFFFF, 0xFFFF, NULL);
   if (!mmu->blocks[MMU_INT_ENABLE]) goto cleanup;
 
-  mmu->mbc = mbc_create(rom);
-  if (!mmu->mbc) goto cleanup;
 
   mmu->ram_enabled = false;
   mmu->current_ram_bank = 0;
@@ -132,6 +131,8 @@ cleanup:
 
 
 uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
+
+  mbc_regs_t* mbc_regs = mmu->cart->mbc->regs;
   
   // Special handling for external RAM region
   if (address >= 0xA000 && address <= 0xBFFF) {
@@ -140,9 +141,9 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
     }
     
     // Check if an RTC register is selected (MBC3 only)
-    if (mmu->mbc->regs->rtc_register >= 0x08 && mmu->mbc->regs->rtc_register <= 0x0C) {
+    if (mbc_regs->rtc_register >= 0x08 && mbc_regs->rtc_register <= 0x0C) {
       // Return latched RTC register value
-      switch (mmu->mbc->regs->rtc_register) {
+      switch (mbc_regs->rtc_register) {
         case 0x08: return mmu->rtc_s_latched;
         case 0x09: return mmu->rtc_m_latched;
         case 0x0A: return mmu->rtc_h_latched;
@@ -166,6 +167,8 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
 }
 
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
+
+  mbc_regs_t* mbc_regs = mmu->cart->mbc->regs;
   
   // Special handling for external RAM region
   if (address >= 0xA000 && address <= 0xBFFF) {
@@ -174,9 +177,9 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
     }
     
     // Check if an RTC register is selected (MBC3 only)
-    if (mmu->mbc->regs->rtc_register >= 0x08 && mmu->mbc->regs->rtc_register <= 0x0C) {
+    if (mbc_regs->rtc_register >= 0x08 && mbc_regs->rtc_register <= 0x0C) {
       // Write to RTC register
-      switch (mmu->mbc->regs->rtc_register) {
+      switch (mbc_regs->rtc_register) {
         case 0x08: mmu->rtc_s = data; return;
         case 0x09: mmu->rtc_m = data; return;
         case 0x0A: mmu->rtc_h = data; return;
@@ -197,49 +200,52 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
   }
 }
 
-void write_rom_fixed(mmu_t* mmu, rom_t* rom_full) {
+void write_rom_fixed(mmu_t* mmu) {
   block_t* block = mmu->blocks[MMU_ROM_FIXED];
 
   uint16_t cpy_len = block->len;
-  if (rom_full->size < cpy_len) {
-    cpy_len = rom_full->size;
+  if (mmu->cart->size < cpy_len) {
+    cpy_len = mmu->cart->size;
   }
 
-  memcpy(block->buf, rom_full->data, cpy_len);
+  memcpy(block->buf, mmu->cart->data, cpy_len);
 }
 
-int switch_rom(mmu_t* mmu, rom_t* rom_full, uint16_t bank, uint8_t fixed_rom) {
+int switch_rom(mmu_t* mmu, uint16_t bank, uint8_t fixed_rom) {
   mmu_region_t block_key = fixed_rom ? MMU_ROM_FIXED : MMU_ROM_SWITCH;
   block_t* block = mmu->blocks[MMU_ROM_SWITCH];
 
   if (bank < 2 || bank > 512) { return -1; }
 
   long address = bank * block->len;
-  if (address >= rom_full->size) { return -1; }
+  if (address >= mmu->cart->size) { return -1; }
 
-  memcpy(block->buf, &rom_full->data[address], block->len);
+  memcpy(block->buf, &mmu->cart->data[address], block->len);
   return 0;
 }
 
 int switch_ram(mmu_t* mmu, uint16_t bank) {
-  if (!mmu->mbc->rom->is_ram) { return -1; }
+  if (!mmu->ram_enabled) { return -1; }
   
   mmu->current_ram_bank = bank;
+
+  uint8_t* ext_ram_buf = get_ram_bank(mmu->cart, mmu->current_ram_bank);
+  mmu->blocks[MMU_EXT_RAM]->buf = ext_ram_buf;
+  // Note - no mem leak here
+  // all ram bank lifecycles are owned by ext_ram module
   
-  // TODO - swap between actual RAM banks here
-  // - these ram banks will be used in .sav files
-  // - variable number of banks for different cart types
   return 0;
 }
 
-int mbc_intercept(mmu_t* mmu, rom_t* rom_full, mbc_t* mbc, uint16_t addr, uint8_t data) {
-  intercept_flags_t flags = mbc->intercept(mbc, addr, data);
+int mbc_intercept(mmu_t* mmu, uint16_t addr, uint8_t data) {
+  cart_t* cart = mmu->cart;
+  intercept_flags_t flags = cart->mbc->intercept(cart->mbc, addr, data);
 
   if (flags.set_switch_bank) {
-    switch_rom(mmu, rom_full, flags.switch_bank, 0);
+    switch_rom(mmu, flags.switch_bank, 0);
   }
   if (flags.set_fixed_bank) {
-    switch_rom(mmu, rom_full, flags.fixed_bank, 1);
+    switch_rom(mmu, flags.fixed_bank, 1);
   }
   if (flags.set_ram_gate) {
     mmu->ram_enabled = flags.ram_gate_enabled;

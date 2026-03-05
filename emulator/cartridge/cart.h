@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../static/cart_type_data.h"
+#include "ext_ram.h"
+#include "mbc.h"
 
 #define CART_TYPE_ADDR 0x0147
 
@@ -17,9 +19,13 @@ typedef struct {
   bool is_timer;
   bool is_rumble;
   bool is_sensor;
-} rom_t;
+  mbc_t* mbc;
+  ext_ram_t* ext_ram;
+} cart_t;
 
-rom_t* rom_create(char* file_name);
-void rom_destroy(rom_t* rom);
+cart_t* cart_create(char* file_name);
+void cart_destroy(cart_t* cart);
+
+uint8_t* get_ram_bank(cart_t* cart, uint8_t bank_num);
 
 #endif

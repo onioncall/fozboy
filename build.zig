@@ -25,8 +25,9 @@ pub fn build(b: *std.Build) void {
         "emulator/gbc.c",
         "emulator/cpu/cpu.c",
         "emulator/memory/mmu.c",
-        "emulator/memory/rom.c",
-        "emulator/memory/mbc.c",
+        "emulator/cartridge/cart.c",
+        "emulator/cartridge/ext_ram.c",
+        "emulator/cartridge/mbc.c",
         "emulator/static/cart_type_data.c",
     };
 
@@ -60,7 +61,7 @@ pub fn build(b: *std.Build) void {
     const mbc_test_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("emulator/memory/mbc.test.zig"),
+        .root_source_file = b.path("emulator/cartridge/mbc.test.zig"),
     });
 
     const mmu_test_module = b.createModule(.{

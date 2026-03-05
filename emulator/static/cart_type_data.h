@@ -22,6 +22,7 @@ typedef struct {
   cart_type_enum cart_type;
   uint8_t* codes;
   uint8_t codes_len;
+  uint8_t ram_banks;
 } cart_type_data_item;
 
 extern const uint8_t CART_TYPE_MAP_LEN;
