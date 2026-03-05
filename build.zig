@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
         "emulator/cartridge/cart.c",
         "emulator/cartridge/ext_ram.c",
         "emulator/cartridge/mbc.c",
+        "emulator/core/core.c",
         "emulator/static/cart_type_data.c",
     };
 
