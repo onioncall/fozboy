@@ -52,5 +52,23 @@ cleanup:
 
 ERR_CORE run() {
 
+  while (1) {
+
+    // Read next opcode
+    // Get args based on opcode
+    // get result of cpu instruction from instructions.c
+    // Handle follow up implications from each instruction (ex mmu writes, jumps)
+      // advance rom reader pointer to next line (unless instruction is a jump I guess)
+      // is rom reader pointer one of the cpu registers?
+
+    // Any other per-cycle handling ticks here
+      // ex. apu, ppu, rtc
+      // pass the cycle count to each one of these, 
+      // because this loop is per-instruction, the amount of virtual cpu cycles can vary between loops
+      
+    // LAST - calculate time delta based on instruction's cycle count and wait
+
+  }
+
   return NULL;
 }
