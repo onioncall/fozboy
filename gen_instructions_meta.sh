@@ -148,6 +148,7 @@ EOF
   output+=$current
 }
 
+# TODO cbprefixed
 jqstr='.unprefixed | keys[] as $k | "\($k)|\(.[$k])"'
 ops=$(jq -r "$jqstr" bb_ops.json)
 # ops=$(curl $source_url | jq -r "$jqstr")
