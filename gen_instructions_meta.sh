@@ -8,24 +8,98 @@ output=$(cat << EOF
 #include "instructions_meta.h"
 
 const instruction_meta_t INSTRUCTIONS[256] = {
-
 EOF
 )
 
 add_struct_prop(){
-  output+=$(cat << EOF
+  mode=$3
+  struct_prop=$(cat << EOF
 ,
     .$1 = $2
 EOF
 )
+
+  if [ $mode == 1 ]; then
+    output+=$struct_prop
+  elif [ $mode == 2 ]; then
+    current+=$struct_prop
+  elif [ $mode == 3 ]; then
+    sp_buf+=$struct_prop
+  fi
 }
 
-jqstr='.unprefixed | keys[] as $k | "\($k)|\(.[$k])"'
-ops=$(jq -r "$jqstr" bb_ops.json)
-# ops=$(curl $source_url | jq -r "$jqstr")
+# $1 = the arg string
+# $2 = (1 || 2) first or second arg
+# $3 = (true || null) immediate (ie. is not a reference)
+# $4 = (true || null) increment
+# $5 = (true || null) decrement
+handle_arg(){
 
-for op in ${ops[@]};
-do
+  type_str="arg" + $2 + "_type"
+  val_str="arg" + $2 + "_value"
+
+  for arg in "$00" "$08" "$10" "$18" "$20" "$28" "$30" "$38"; do
+    if [ arg == $1 ]; then
+      add_struct_prop $type_str "ARG_VEC" 3
+      add_struct_prop $val_str ${arg/\$/0x} 3
+    fi
+  done
+
+  for arg in "A" "B" "C" "D" "E"; do
+    if [ arg == $1 ]; then
+      deref_str=""
+      if [ $3 == "null" ]; then
+        deref_str="_DEREF"
+      fi
+      add_struct_prop $type_str "ARG_R8$deref_str" 3
+      add_struct_prop $val_str "R8_$arg" 3
+    fi
+  done
+
+  # TODO - the "load and increment/decrement" ops won't work with this pattern using current c struct approach
+  for arg in "AF" "BC" "DE" "HL" "SP"; do 
+    if [ arg == $1 ]; then
+      deref_str=""
+      if [ $3 == "null" ]; then
+        deref_str="_DEREF"
+      fi
+      add_struct_prop $type_str "ARG_R16$deref_str" 3
+      add_struct_prop $val_str "R16_$arg" 3
+    fi
+  done
+  if [ $1 == "H" ]; then
+    # TODO
+  fi;
+  if [ $1 == "NC" ]; then
+    # TODO
+  fi;
+  if [ $1 == "NZ" ]; then
+    # TODO
+  fi;
+  if [ $1 == "Z" ]; then
+    # TODO
+  fi;
+  if [ $1 == "a16" ]; then
+    add_struct_prop $type_str "ARG_A16" 3
+    # no val necessary for types parsed from binary directly
+  fi;
+  if [ $1 == "a8" ]; then
+    add_struct_prop $type_str "ARG_A8" 3
+  fi;
+  if [ $1 == "e8" ]; then
+    add_struct_prop $type_str "ARG_E8" 3
+  fi;
+  if [ $1 == "n16" ]; then
+    add_struct_prop $type_str "ARG_N16" 3
+  fi;
+  if [ $1 == "n8" ]; then
+    add_struct_prop $type_str "ARG_N8" 3
+  fi;
+}
+
+handle_op(){
+  op=$1
+
   # this probably wouldn't work if the json had any strings with spaces
   keyval=(${op//|/ })
   opcode=${keyval[0]}
@@ -39,7 +113,24 @@ do
   arg1=$(echo $opdata | jq -r '.operands[0].name')
   arg2=$(echo $opdata | jq -r '.operands[1].name')
 
-  output+=$(cat << EOF
+  sp_buf=""
+  inc_flag=0
+  dec_flag=0
+  if [ $arg1 != 'null' ]; then
+    # call the handler
+  fi
+
+  if [ $arg2 != 'null' ]; then
+    # call the handler
+  fi
+
+  if [ $inc_flag != 0 ]; then
+    opname+="I"
+  elif [ $def_flag != 0 ]; then
+    opname+="D"
+  fi
+
+  current=$(cat << EOF
   [$opcode] = { 
     .bytes = $bytes,
     .cycles = $cycles,
@@ -48,16 +139,22 @@ EOF
 )
 
   if [ $cycles_noact != 'null' ]; then
-    add_struct_prop 'cycles_noact' $cycles_noact
+    struct_prop=""
+    add_struct_prop 'cycles_noact' $cycles_noact 2
   fi
 
-  if [ $arg1 != 'null' ]; then
-    # todo handle value and type name transformation
-    add_struct_prop 'arg1_type' $arg1
-  fi
+  current+=$sp_buf
 
-  # todo everything else 
+  output+=$current
+}
 
+jqstr='.unprefixed | keys[] as $k | "\($k)|\(.[$k])"'
+ops=$(jq -r "$jqstr" bb_ops.json)
+# ops=$(curl $source_url | jq -r "$jqstr")
+
+for op in ${ops[@]};
+  handle_op $op
+do
 done
 
 output+=$'\n'
