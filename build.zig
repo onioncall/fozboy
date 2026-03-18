@@ -30,6 +30,7 @@ pub fn build(b: *std.Build) void {
         "emulator/cartridge/mbc.c",
         "emulator/core/core.c",
         "emulator/static/cart_type_data.c",
+        "emulator/static/instructions_meta.c",
     };
 
     // Add C source files to the module (not needed for Zig projects)

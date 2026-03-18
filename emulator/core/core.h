@@ -13,7 +13,8 @@ typedef struct {
 } core_t;
 
 typedef enum {
-  ERR_INVALID_OPCODE
+  ERR_CORE_OK = 0,
+  ERR_CORE_INVALID_OPCODE,
 } ERR_CORE;
 
 void core_destroy(core_t *core);

@@ -70,5 +70,5 @@ ERR_CORE run() {
 
   }
 
-  return NULL;
+  return ERR_CORE_OK;
 }

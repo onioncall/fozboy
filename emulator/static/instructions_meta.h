@@ -7,11 +7,61 @@ typedef enum {
   OP_NOP = 0, // NOOP
   OP_ADC, // Add value plus carry flag to A
   OP_ADD, // Add value
-  OP_LD, // Load
-  OP_LDI, // Load and increment
-  OP_LDD, // Load and decrement
-  OP_INC, // Increment
+  OP_AND,
+  OP_BIT,
+  OP_CALL,
+  OP_CCF,
+  OP_CP,
+  OP_CPL,
+  OP_DAA,
   OP_DEC, // Decrement
+  OP_DI,
+  OP_EI,
+  OP_HALT,
+  OP_ILLEGAL_D3,
+  OP_ILLEGAL_DB,
+  OP_ILLEGAL_DD,
+  OP_ILLEGAL_E3,
+  OP_ILLEGAL_E4,
+  OP_ILLEGAL_EB,
+  OP_ILLEGAL_EC,
+  OP_ILLEGAL_ED,
+  OP_ILLEGAL_F4,
+  OP_ILLEGAL_FC,
+  OP_ILLEGAL_FD,
+  OP_INC, // Increment
+  OP_JP,
+  OP_JR,
+  OP_LD, // Load
+  OP_LDD, // Load and decrement
+  OP_LDH,
+  OP_LDI, // Load and increment
+  OP_OR,
+  OP_POP,
+  OP_PREFIX,
+  OP_PUSH,
+  OP_RES,
+  OP_RET,
+  OP_RETI,
+  OP_RL,
+  OP_RLA,
+  OP_RLC,
+  OP_RLCA,
+  OP_RR,
+  OP_RRA,
+  OP_RRC,
+  OP_RRCA,
+  OP_RST,
+  OP_SBC,
+  OP_SCF,
+  OP_SET,
+  OP_SLA,
+  OP_SRA,
+  OP_SRL,
+  OP_STOP,
+  OP_SUB,
+  OP_SWAP,
+  OP_XOR,
 } op_type_enum;
 
 typedef enum {
@@ -36,7 +86,9 @@ typedef enum {
   R8_B,
   R8_C,
   R8_D,
-  R8_E
+  R8_E,
+  R8_H,
+  R8_L
 } cpu_registers_8bit_enum;
 
 typedef enum {
@@ -59,6 +111,7 @@ typedef enum {
 typedef struct {
   uint8_t bytes; // including opcode byte
   uint8_t cycles; // T-Cycles (NOT M-cycles)
+  uint8_t cycles_noact; // T-Cycles taken when no action (only specific instructions)
   op_type_enum op; // Instruction type
   arg_type_enum arg1_type;
   uint8_t arg1_value; // Only present if defined statically in the instruction
