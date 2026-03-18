@@ -1,9 +1,9 @@
 #ifndef CORE_H
 #define CORE_H
 
-#import "../cartridge/cart.h"
-#import "../memory/mmu.h"
-#import "../cpu/cpu.h"
+#include "../cartridge/cart.h"
+#include "../memory/mmu.h"
+#include "../cpu/cpu.h"
 #include <stdlib.h>
 
 typedef struct {

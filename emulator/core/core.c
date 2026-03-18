@@ -1,8 +1,8 @@
 
-#import "core.h"
-#import "../cartridge/cart.h"
-#import "../memory/mmu.h"
-#import "../cpu/cpu.h"
+#include "core.h"
+#include "../cartridge/cart.h"
+#include "../memory/mmu.h"
+#include "../cpu/cpu.h"
 #include <stdlib.h>
 
 void core_destroy(core_t *core) {
