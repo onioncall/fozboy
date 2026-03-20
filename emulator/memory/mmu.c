@@ -45,6 +45,65 @@ void block_destroy_no_buf_free(block_t* block) {
   free(block); // Only free the block struct, not the buffer
 }
 
+int switch_rom(mmu_t* mmu, uint16_t bank, uint8_t fixed_rom) {
+  mmu_region_t block_key = fixed_rom ? MMU_ROM_FIXED : MMU_ROM_SWITCH;
+  block_t* block = mmu->blocks[MMU_ROM_SWITCH];
+
+  if (bank < 2 || bank > 512) { return -1; }
+
+  long address = bank * block->len;
+  if (address >= mmu->cart->size) { return -1; }
+
+  memcpy(block->buf, &mmu->cart->data[address], block->len);
+  return 0;
+}
+
+int switch_ram(mmu_t* mmu, uint16_t bank) {
+  if (!mmu->ram_enabled) { return -1; }
+  
+  mmu->current_ram_bank = bank;
+
+  uint8_t* ext_ram_buf = get_ram_bank(mmu->cart, mmu->current_ram_bank);
+  mmu->blocks[MMU_EXT_RAM]->buf = ext_ram_buf;
+  // Note - no mem leak here
+  // all ram bank lifecycles are owned by ext_ram module
+  
+  return 0;
+}
+
+
+int mbc_intercept(mmu_t* mmu, uint16_t addr, uint8_t data) {
+  cart_t* cart = mmu->cart;
+  intercept_flags_t flags = cart->mbc->intercept(cart->mbc, addr, data);
+
+  if (flags.set_switch_bank) {
+    switch_rom(mmu, flags.switch_bank, 0);
+  }
+  if (flags.set_fixed_bank) {
+    switch_rom(mmu, flags.fixed_bank, 1);
+  }
+  if (flags.set_ram_gate) {
+    mmu->ram_enabled = flags.ram_gate_enabled;
+  }
+  if (flags.set_ram_bank) {
+    switch_ram(mmu, flags.ram_bank);
+  }
+  if (flags.set_timer) {
+    mmu->timer_enabled = flags.timer_enabled;
+  }
+  if (flags.latch_rtc) {
+    // Freeze the clock in place
+    // this is done in case the clock tics between reads of s, m, h, etc
+    mmu->rtc_s_latched = mmu->rtc_s;
+    mmu->rtc_m_latched = mmu->rtc_m;
+    mmu->rtc_h_latched = mmu->rtc_h;
+    mmu->rtc_dl_latched = mmu->rtc_dl;
+    mmu->rtc_dh_latched = mmu->rtc_dh;
+  }
+
+  return flags.mbc;
+}
+
 void mmu_destroy(mmu_t* mmu) {
   block_destroy(mmu->blocks[MMU_ROM_FIXED]);
   block_destroy(mmu->blocks[MMU_ROM_SWITCH]);
@@ -166,6 +225,7 @@ uint8_t mmu_read(mmu_t* mmu, uint16_t address) {
   return 0xFF; // unmapped
 }
 
+
 void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
 
   mbc_regs_t* mbc_regs = mmu->cart->mbc->regs;
@@ -187,6 +247,10 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
         case 0x0C: mmu->rtc_dh = data; return;
       }
     }
+  }
+
+  if (mbc_intercept()) {
+
   }
   
   // identify block to write to and write
@@ -211,60 +275,3 @@ void write_rom_fixed(mmu_t* mmu) {
   memcpy(block->buf, mmu->cart->data, cpy_len);
 }
 
-int switch_rom(mmu_t* mmu, uint16_t bank, uint8_t fixed_rom) {
-  mmu_region_t block_key = fixed_rom ? MMU_ROM_FIXED : MMU_ROM_SWITCH;
-  block_t* block = mmu->blocks[MMU_ROM_SWITCH];
-
-  if (bank < 2 || bank > 512) { return -1; }
-
-  long address = bank * block->len;
-  if (address >= mmu->cart->size) { return -1; }
-
-  memcpy(block->buf, &mmu->cart->data[address], block->len);
-  return 0;
-}
-
-int switch_ram(mmu_t* mmu, uint16_t bank) {
-  if (!mmu->ram_enabled) { return -1; }
-  
-  mmu->current_ram_bank = bank;
-
-  uint8_t* ext_ram_buf = get_ram_bank(mmu->cart, mmu->current_ram_bank);
-  mmu->blocks[MMU_EXT_RAM]->buf = ext_ram_buf;
-  // Note - no mem leak here
-  // all ram bank lifecycles are owned by ext_ram module
-  
-  return 0;
-}
-
-int mbc_intercept(mmu_t* mmu, uint16_t addr, uint8_t data) {
-  cart_t* cart = mmu->cart;
-  intercept_flags_t flags = cart->mbc->intercept(cart->mbc, addr, data);
-
-  if (flags.set_switch_bank) {
-    switch_rom(mmu, flags.switch_bank, 0);
-  }
-  if (flags.set_fixed_bank) {
-    switch_rom(mmu, flags.fixed_bank, 1);
-  }
-  if (flags.set_ram_gate) {
-    mmu->ram_enabled = flags.ram_gate_enabled;
-  }
-  if (flags.set_ram_bank) {
-    switch_ram(mmu, flags.ram_bank);
-  }
-  if (flags.set_timer) {
-    mmu->timer_enabled = flags.timer_enabled;
-  }
-  if (flags.latch_rtc) {
-    // Freeze the clock in place
-    // this is done in case the clock tics between reads of s, m, h, etc
-    mmu->rtc_s_latched = mmu->rtc_s;
-    mmu->rtc_m_latched = mmu->rtc_m;
-    mmu->rtc_h_latched = mmu->rtc_h;
-    mmu->rtc_dl_latched = mmu->rtc_dl;
-    mmu->rtc_dh_latched = mmu->rtc_dh;
-  }
-
-  return flags.mbc;
-}
