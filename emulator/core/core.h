@@ -19,6 +19,6 @@ typedef enum {
 
 void core_destroy(core_t *core);
 core_t* core_create(char *file_name);
-ERR_CORE run();
+ERR_CORE run(core_t* core);
 
 #endif

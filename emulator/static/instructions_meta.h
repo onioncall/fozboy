@@ -109,14 +109,17 @@ typedef enum {
 } condition_code_enum;
 
 typedef struct {
-  uint8_t bytes; // including opcode byte
-  uint8_t cycles; // T-Cycles (NOT M-cycles)
-  uint8_t cycles_noact; // T-Cycles taken when no action (only specific instructions)
-  op_type_enum op; // Instruction type
-  arg_type_enum arg1_type;
-  uint8_t arg1_value; // Only present if defined statically in the instruction
-  arg_type_enum arg2_type;
-  uint8_t arg2_value; // Only present if defined statically in the instruction
+  const uint8_t bytes; // including opcode byte
+  const uint8_t cycles; // T-Cycles (NOT M-cycles)
+  const uint8_t cycles_noact; // T-Cycles taken when no action (only specific instructions)
+  const op_type_enum op; // Instruction type
+  const arg_type_enum arg1_type;
+  const uint8_t arg1_value; // Only present if defined statically in the instruction
+  const arg_type_enum arg2_type;
+  const uint8_t arg2_value; // Only present if defined statically in the instruction
 } instruction_meta_t;
+
+extern const instruction_meta_t INS_UNPREFIXED[256];
+extern const instruction_meta_t INS_CBPREFIXED[256];
 
 #endif

@@ -1,6 +1,8 @@
 
 #include "core.h"
 #include "../cartridge/cart.h"
+#include "../cartridge/ext_ram.h"
+#include "../static/instructions_meta.h"
 #include "../memory/mmu.h"
 #include "../cpu/cpu.h"
 #include <stdlib.h>
@@ -50,24 +52,41 @@ cleanup:
   return NULL;
 }
 
-ERR_CORE run() {
+ERR_CORE run(core_t* core) {
+  uint8_t opcode;
+  uint8_t opdata[2];
 
   while (1) {
 
     // Read next opcode
+    opcode = mmu_read(core->mmu, core->cpu->pc);
+
     // Get args based on opcode
-    // get result of cpu instruction from instructions.c
+    const instruction_meta_t *meta = &INS_UNPREFIXED[opcode];
+    if (meta->op == OP_PREFIX) {
+      meta = &INS_CBPREFIXED[mmu_read(core->mmu, ++core->cpu->pc)];
+    }
+
+    if (meta->bytes > 1) opdata[0] = mmu_read(core->mmu, core->cpu->pc + 1);
+    if (meta->bytes > 2) opdata[1] = mmu_read(core->mmu, core->cpu->pc + 2);
+
+    // Advance program counter to next op
+    core->cpu->pc += meta->bytes;
+
     // Handle follow up implications from each instruction (ex mmu writes, jumps)
-      // advance rom reader pointer to next line (unless instruction is a jump I guess)
-      // is rom reader pointer one of the cpu registers?
 
     // Any other per-cycle handling ticks here
       // ex. apu, ppu, rtc
       // pass the cycle count to each one of these, 
       // because this loop is per-instruction, the amount of virtual cpu cycles can vary between loops
-      
-    // LAST - calculate time delta based on instruction's cycle count and wait
 
+    snapshot_ram_throttled(core->cart->ext_ram);
+
+    // LAST - Accumulate cycle count
+    // LAST - periodically calculate time delta based on instruction's cycle count and wait
+    // do this every scanline (456 t-cycle) 
+    // or every frame (456 * 154 scanlines = 70224 cycles = 1 frame) 
+    // note - GB is 4194304 t-cycles/second
   }
 
   return ERR_CORE_OK;
