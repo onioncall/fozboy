@@ -249,8 +249,9 @@ void mmu_write(mmu_t* mmu, uint16_t address, uint8_t data) {
     }
   }
 
-  if (mbc_intercept()) {
-
+  if (mbc_intercept(mmu, address, data)) {
+    // if mbc logic was hit, do not write to memory
+    return;
   }
   
   // identify block to write to and write
