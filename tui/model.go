@@ -1,42 +1,74 @@
 package tui
 
-import (
-	"time"
+import tea "charm.land/bubbletea/v2"
 
-	tea "github.com/charmbracelet/bubbletea"
+type model struct {
+	screen        string
+	width         int
+	height        int
+	borderWidth   int
+	borderHeight  int
+	aFocused      bool
+	bFocused      bool
+	leftFocused   bool
+	rightFocused  bool
+	upFocused     bool
+	downFocused   bool
+	startFocused  bool
+	selectFocused bool
+	imageData     string
+	imageSent     bool
+	loadImage     bool
+}
+
+const (
+	// We need to calculate dimensions that maintain 10:9 ratio (gbc screen)
+	// and account for terminal cells being roughly 2:1 height to width. All
+	// this to say we are working with a 20:9 ratio
+	aspectRatioNumerator   = 20
+	aspectRatioDenominator = 9
+
+	// Minimum image dimensions in terminal cells
+	minImageCols = 10
+	minImageRows = 5
 )
 
-type tickMsg time.Time
+func InitialModel() model {
+	m := model{
+		screen: "",
+	}
 
-type Model struct {
-	width  int
-	height int
-
-	aFocused bool
-	bFocused bool
-
-	upFocused    bool
-	downFocused  bool
-	leftFocused  bool
-	rightFocused bool
-
-	selectFocused bool
-	startFocused  bool
-
-	ticksSinceKeyPress int
-	tickRunning        bool
+	return m
 }
 
-func InitialModel() Model {
-	return Model{}
-}
-
-func (m Model) Init() tea.Cmd {
+func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func tickCmd() tea.Cmd {
-	return tea.Tick(time.Second/60, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
+func (m *model) calculateBorderSize() {
+	availWidth := m.width - 20
+	availHeight := m.height - 4
+
+	if availWidth < 10 {
+		availWidth = 10
+	}
+	if availHeight < 5 {
+		availHeight = 5
+	}
+
+	heightBasedWidth := (availHeight * 20) / 9
+	if heightBasedWidth <= availWidth {
+		m.borderHeight = availHeight
+		m.borderWidth = heightBasedWidth
+	} else {
+		m.borderWidth = availWidth
+		m.borderHeight = (availWidth * 9) / 20
+	}
+
+	if m.borderWidth < 10 {
+		m.borderWidth = 10
+	}
+	if m.borderHeight < 5 {
+		m.borderHeight = 5
+	}
 }

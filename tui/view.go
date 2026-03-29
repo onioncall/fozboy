@@ -1,175 +1,127 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m Model) View() string {
+func renderButton(label string, focused bool) string {
+	green := "\033[92m"
+	red := "\033[91m"
+	reset := "\033[0m"
+
+	if focused {
+		return fmt.Sprintf("%s[ %s ]%s", red, label, reset)
+	}
+	return fmt.Sprintf("%s[ %s ]%s", green, label, reset)
+}
+
+func (m model) View() tea.View {
+	var v tea.View
+
 	if m.width == 0 || m.height == 0 {
-		return ""
+		v.SetContent("Loading...")
+	} else if m.width < 50 || m.height < 15 {
+		v.SetContent("Terminal too small. Please resize.")
+	} else {
+		offsetY := (m.height - m.borderHeight) / 2
+		offsetX := (m.width - m.borderWidth) / 2
+
+		mainBorderLines := make([]string, m.borderHeight)
+
+		// Top border
+		mainBorderLines[0] = "╭" + strings.Repeat("─", m.borderWidth-2) + "╮"
+
+		// Middle rows
+		for i := 1; i < m.borderHeight-1; i++ {
+			contentWidth := m.borderWidth - 2
+
+			// We won't need this when we are actually getting image data from the emulator
+			var content string
+			if m.screen != "" {
+				content = m.screen
+			} else if m.imageData == "" {
+				content = "Press SPACE to load image"
+			}
+
+			if content != "" && i == m.borderHeight/2 {
+				padding := contentWidth - len(content)
+				if padding < 0 {
+					content = content[:contentWidth]
+					padding = 0
+				}
+				leftPad := padding / 2
+				rightPad := padding - leftPad
+				mainBorderLines[i] = "│" + strings.Repeat(" ", leftPad) + content + strings.Repeat(" ", rightPad) + "│"
+			} else {
+				mainBorderLines[i] = "│" + strings.Repeat(" ", contentWidth) + "│"
+			}
+		}
+
+		// Bottom border
+		mainBorderLines[m.borderHeight-1] = "╰" + strings.Repeat("─", m.borderWidth-2) + "╯"
+
+		btnUp := renderButton("↑", m.upFocused)
+		btnDown := renderButton("↓", m.downFocused)
+		btnLeft := renderButton("←", m.leftFocused)
+		btnRight := renderButton("→", m.rightFocused)
+		btnB := renderButton("B", m.bFocused)
+		btnA := renderButton("A", m.aFocused)
+		btnSelect := renderButton("Select", m.selectFocused)
+		btnStart := renderButton("Start", m.startFocused)
+
+		var sb strings.Builder
+
+		for range offsetY {
+			sb.WriteString("\n")
+		}
+
+		allButtonsHeight := 9
+		buttonsStartY := (m.borderHeight - allButtonsHeight) / 2
+
+		for i := range m.borderHeight {
+			sb.WriteString(strings.Repeat(" ", offsetX))
+			sb.WriteString(mainBorderLines[i])
+
+			relY := i - buttonsStartY
+			sb.WriteString("    ")
+
+			if relY == 0 {
+				sb.WriteString("    ")
+				sb.WriteString(btnUp)
+			} else if relY == 1 {
+				sb.WriteString(btnLeft)
+				sb.WriteString("   ")
+				sb.WriteString(btnRight)
+			} else if relY == 2 {
+				sb.WriteString("    ")
+				sb.WriteString(btnDown)
+			} else if relY == 4 {
+				sb.WriteString("    ")
+				sb.WriteString(btnB)
+			} else if relY == 5 {
+				sb.WriteString("    ")
+				sb.WriteString(btnA)
+			} else if relY == 7 {
+				sb.WriteString("  ")
+				sb.WriteString(btnStart)
+			} else if relY == 8 {
+				sb.WriteString("  ")
+				sb.WriteString(btnSelect)
+			}
+			sb.WriteString("\n")
+		}
+
+		sb.WriteString(fmt.Sprintf("\nTerminal: %dx%d  Border: %dx%d (ratio: %.2f)",
+			m.width, m.height, m.borderWidth, m.borderHeight,
+			float64(m.borderWidth*2)/float64(m.borderHeight)))
+
+		v.SetContent(sb.String())
 	}
 
-	boxHeight := m.height - 2
-	boxWidth := m.height
-
-	contentHeight := (boxHeight - 3) / 2
-
-	activeButtonStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("208")) // Orange color
-
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Width(boxWidth).
-		Height(boxHeight).
-		Align(lipgloss.Center, lipgloss.Center)
-
-	topSection := lipgloss.NewStyle().
-		Height(contentHeight).
-		Width(boxWidth-2).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render("This will be a screen")
-
-	dividerLine := strings.Repeat("─", boxWidth-2)
-	divider := lipgloss.NewStyle().
-		Width(boxWidth - 2).
-		Render(dividerLine)
-
-	selectButton := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Padding(0, 1).
-		Render("select")
-
-	if m.selectFocused {
-		selectButton = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("208")).
-			Padding(0, 1).
-			Foreground(lipgloss.Color("208")). // Orange color
-			Render("select")
-	}
-
-	startButton := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Padding(0, 1).
-		Render("start")
-
-	if m.startFocused {
-		startButton = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("208")).
-			Padding(0, 1).
-			Foreground(lipgloss.Color("208")). // Orange color
-			Render("start")
-	}
-
-	bButton := "[ B ]"
-	if m.bFocused {
-		bButton = activeButtonStyle.Render(bButton)
-	}
-	aButton := "[ A ]"
-	if m.aFocused {
-		aButton = activeButtonStyle.Render(aButton)
-	}
-
-	leftArrowButton := "[ ← │"
-	if m.leftFocused {
-		leftArrowButton = activeButtonStyle.Render(leftArrowButton)
-	}
-	rightArrowButton := "│ → ]"
-	if m.rightFocused {
-		rightArrowButton = activeButtonStyle.Render(rightArrowButton)
-	}
-	upArrowButton := "│ ↑ │"
-	if m.upFocused {
-		upArrowButton = activeButtonStyle.Render(upArrowButton)
-	}
-	downArrowButton := "│ ↓ │"
-	if m.downFocused {
-		downArrowButton = activeButtonStyle.Render(downArrowButton)
-	}
-
-	bottomButtons := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		selectButton,
-		"  ",
-		startButton,
-	)
-
-	rightButtons := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		bButton,
-		"  ",
-		aButton,
-	)
-
-	leftArrowButtons := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		leftArrowButton,
-		"   ",
-		rightArrowButton,
-	)
-
-	upArrowCentered := lipgloss.NewStyle().
-		Width(lipgloss.Width(leftArrowButtons)).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(upArrowButton)
-
-	downArrowCentered := lipgloss.NewStyle().
-		Width(lipgloss.Width(leftArrowButtons)).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(downArrowButton)
-
-	leftButtons := lipgloss.JoinVertical(
-		lipgloss.Center,
-		upArrowCentered,
-		leftArrowButtons,
-		downArrowCentered,
-	)
-
-	middleSection := lipgloss.NewStyle().
-		Width(boxWidth - 2).
-		Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				leftButtons,
-				strings.Repeat(" ", (boxWidth-2)-lipgloss.Width(leftButtons)-lipgloss.Width(rightButtons)),
-				rightButtons,
-			),
-		)
-
-	bottomSection := lipgloss.NewStyle().
-		Width(boxWidth-2).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(bottomButtons)
-
-	middleHeight := contentHeight / 2
-	remainingHeight := contentHeight - middleHeight - lipgloss.Height(bottomSection)
-
-	bottomContent := lipgloss.JoinVertical(
-		lipgloss.Left,
-		strings.Repeat("\n", middleHeight-3),
-		middleSection,
-		strings.Repeat("\n", remainingHeight),
-		bottomSection,
-	)
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		topSection,
-		divider,
-		bottomContent,
-	)
-
-	box := boxStyle.Render(content)
-
-	return "\n\n" + lipgloss.Place(
-		m.width,
-		m.height-1,
-		lipgloss.Center,
-		lipgloss.Top,
-		box,
-		lipgloss.WithWhitespaceChars(" "),
-	)
+	v.AltScreen = true
+	v.KeyboardEnhancements.ReportEventTypes = true
+	return v
 }

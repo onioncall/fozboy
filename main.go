@@ -9,17 +9,18 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/onioncall/fozboy/tui"
 )
 
 func main() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "tui" {
-			p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
+			p := tea.NewProgram(tui.InitialModel())
+
 			if _, err := p.Run(); err != nil {
 				fmt.Printf("Error: %v", err)
-				return
+				os.Exit(1)
 			}
 		}
 	}

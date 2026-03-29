@@ -1,96 +1,92 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"encoding/base64"
+	"fmt"
+	"os"
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	tea "charm.land/bubbletea/v2"
+)
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q", "esc":
-			return m, tea.Quit
-		case "left", "a", "h":
-			m.leftFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "right", "d", "l":
-			m.rightFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "up", "w", "k":
-			m.upFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "down", "s", "j":
-			m.downFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "n":
-			m.bFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "m":
-			m.aFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "x":
-			m.selectFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-		case "c":
-			m.startFocused = true
-			m.ticksSinceKeyPress = 0
-			if !m.tickRunning {
-				m.tickRunning = true
-				return m, tickCmd()
-			}
-			return m, nil
-		}
-
-	case tickMsg:
-		if m.tickRunning {
-			m.ticksSinceKeyPress++
-
-			// If no key press in last 3 ticks, assume released
-			if m.ticksSinceKeyPress > 3 {
-				m.leftFocused = false
-				m.rightFocused = false
-				m.upFocused = false
-				m.downFocused = false
-				m.aFocused = false
-				m.bFocused = false
-				m.startFocused = false
-				m.selectFocused = false
-				m.tickRunning = false
-				return m, nil
-			}
-
-			return m, tickCmd()
-		}
-
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.calculateBorderSize()
+
+	case tea.KeyPressMsg:
+		switch msg.String() {
+		case "esc", "ctrl+c":
+			return m, tea.Quit
+		case " ", "space":
+			m.screen = "Key down"
+
+			if m.imageData == "" {
+				imageBytes, err := os.ReadFile("./tui/test-gbc-fitted.png")
+				if err != nil {
+					m.screen = fmt.Sprintf("Error loading image: %v", err)
+					return m, nil
+				}
+				m.imageData = base64.StdEncoding.EncodeToString(imageBytes)
+
+				// Calculate cursor position for centering
+				offsetY := (m.height - m.borderHeight) / 2
+				offsetX := (m.width - m.borderWidth) / 2
+
+				// Center the image horizontally
+				imageCols := m.borderWidth - imagePadding
+				borderInnerWidth := m.borderWidth - 2
+				remainingWidth := borderInnerWidth - imageCols
+				horizontalOffset := remainingWidth / 2
+
+				imageRow := offsetY + 2
+				imageCol := offsetX + 1 + horizontalOffset
+
+				fmt.Fprintf(os.Stdout, "\033[%d;%dH", imageRow+1, imageCol+1)
+				fmt.Fprint(os.Stdout, m.renderKittyImage())
+				m.imageSent = true
+			}
+		case "a", "x":
+			m.aFocused = true
+		case "b", "z":
+			m.bFocused = true
+		case "left", "h":
+			m.leftFocused = true
+		case "right", "l":
+			m.rightFocused = true
+		case "up", "k":
+			m.upFocused = true
+		case "down", "j":
+			m.downFocused = true
+		case "n":
+			m.startFocused = true
+		case "m":
+			m.selectFocused = true
+		}
+
+	case tea.KeyReleaseMsg:
+		switch msg.String() {
+		case " ", "space":
+			m.screen = ""
+		case "a", "x":
+			m.aFocused = false
+		case "b", "z":
+			m.bFocused = false
+		case "left", "h":
+			m.leftFocused = false
+		case "right", "l":
+			m.rightFocused = false
+		case "up", "k":
+			m.upFocused = false
+		case "down", "j":
+			m.downFocused = false
+		case "n":
+			m.startFocused = false
+		case "m":
+			m.selectFocused = false
+		}
 	}
+
 	return m, nil
 }
