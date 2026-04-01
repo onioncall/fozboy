@@ -19,7 +19,7 @@ EOF
 
 # $1 = the arg string
 # $2 = (1 || 2) first or second arg
-# $3 = (true || null) immediate (ie. is not a reference)
+# $3 = (true || false || null) immediate (ie. is not a reference)
 # $4 = (0 || 1) is branch instruction ("C" is ambiguous between register and condition)
 handle_arg(){
 
@@ -38,8 +38,8 @@ handle_arg(){
   for arg in "A" "B" "C" "D" "E" "H" "L"; do
     if [[ $arg == $1 && $4 == 0 ]]; then
       deref_str=""
-      if [ $3 == "null" ]; then
-        deref_str="_DEREF"
+      if [ $3 == "null" ] || [ $3 == "false" ]; then
+        deref_str="_DREF"
       fi
       type_val="ARG_R8$deref_str"
       val_val="R8_$arg"
@@ -49,8 +49,8 @@ handle_arg(){
   for arg in "AF" "BC" "DE" "HL" "SP"; do 
     if [ $arg == $1 ]; then
       deref_str=""
-      if [ $3 == "null" ]; then
-        deref_str="_DEREF"
+      if [ $3 == "null" ] || [ $3 == "false" ]; then
+        deref_str="_DREF"
       fi
       type_val="ARG_R16$deref_str"
       val_val="R16_$arg"

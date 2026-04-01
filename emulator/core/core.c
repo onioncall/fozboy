@@ -74,11 +74,75 @@ ERR_CORE run(core_t* core) {
     core->cpu->pc += meta->bytes;
 
     // Handle follow up implications from each instruction (ex mmu writes, jumps)
+    // Probably move this to its own method once it gets bigger 
+    switch (meta->op) {
+    case OP_NOP:
+      break;
+    case OP_LD:
+      // Get value of second arg
+      uint16_t val;
+      switch (meta->arg2_type) {
+      case ARG_R8:
+        val = meta->arg2_value;
+        break;
+      case ARG_N8:
+        val = opdata[0];
+        break;
+      case ARG_N16:
+        // Read little endian opdata
+        val = (opdata[1] << 8) | opdata[0];
+        break;
+      case ARG_R16_DREF:
+        
+        // Probably extract this to a method
+        uint16_t addr;
+        switch (meta->arg2_value) {
+        case R16_AF:
+          // This case isn't going to ever be hit by a LD 
+          // but leaving in case I copy and paste this to a generic method
+          addr = (core->cpu->a << 8) | core->cpu->f;
+          break;
+        case R16_BC:
+          addr = (core->cpu->b << 8) | core->cpu->c;
+          break;
+        case R16_DE:
+          addr = (core->cpu->d << 8) | core->cpu->e;
+          break;
+        case R16_HL:
+          addr = (core->cpu->h <<8) | core->cpu->l;
+          break;
+        case R16_SP:
+          addr = core->cpu->sp;
+
+          if (opcode == 0xF8) {
+            // Literally one opcode has 3 operands in Opcodes.json 
+            // and doesn't fit the schema
+            // I am not modifying the generation script and schema for this
+            addr += (int8_t)opdata[0];
+          }
+          break;
+        }
+        val = mmu_read(core->mmu, addr);
+        break;
+      case ARG_A16:
+        // basically what an ARG_N16_DREF would be
+        val = mmu_read(core->mmu, (opdata[1] << 8) | opdata[0]);
+        break;
+      default: 
+        // TODO Do an error here
+      }
+      
+      // TODO Now finish the load instruction
+      // Might just be able to call the existing cpu methods from here
+
+      break;
+    }
 
     // Any other per-cycle handling ticks here
       // ex. apu, ppu, rtc
       // pass the cycle count to each one of these, 
       // because this loop is per-instruction, the amount of virtual cpu cycles can vary between loops
+
 
     snapshot_ram_throttled(core->cart->ext_ram);
 
