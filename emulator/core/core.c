@@ -78,6 +78,8 @@ ERR_CORE run(core_t* core) {
     switch (meta->op) {
     case OP_NOP:
       break;
+    case OP_LDI:
+    case OP_LDD:
     case OP_LD:
       // Get value of second arg
       uint16_t val;
@@ -131,9 +133,34 @@ ERR_CORE run(core_t* core) {
       default: 
         // TODO Do an error here
       }
+
+      // LDI and LDD always inc or dec the HL register
+      if (meta->op == OP_LDI) {
+          uint16_t hl_reg = (core->cpu->h <<8) | core->cpu->l;
+          ++hl_reg;
+          core->cpu->h = hl_reg >> 8;
+          core->cpu->l = hl_reg;
+      }
+      if (meta->op == OP_LDD) {
+          uint16_t hl_reg = (core->cpu->h <<8) | core->cpu->l;
+          --hl_reg;
+          core->cpu->h = hl_reg >> 8;
+          core->cpu->l = hl_reg;
+      }
       
-      // TODO Now finish the load instruction
-      // Might just be able to call the existing cpu methods from here
+      // Get destination 
+      uint8_t *dest;
+      switch (meta->arg1_type) {
+      case ARG_R8:
+      case ARG_R16:
+      case ARG_R16_DREF:
+      case ARG_A8:
+      case ARG_A16:
+
+      }
+
+
+      //TODO do any loads set flags? the current instruction funcs don't set them
 
       break;
     }
