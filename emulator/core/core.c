@@ -5,7 +5,7 @@
 #include "../static/instructions_meta.h"
 #include "../memory/mmu.h"
 #include "../cpu/cpu.h"
-#include "../handlers.h"
+#include "handlers.h"
 #include <stdlib.h>
 
 void core_destroy(core_t *core) {

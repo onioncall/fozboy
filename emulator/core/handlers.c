@@ -1,21 +1,30 @@
 #include "handlers.h"
 
 ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8_t opdata[]) {
-  // Get value of second arg
   uint16_t addr1;
   uint16_t addr2;
   uint16_t val;
+  
+  // Get value of second arg
   switch (meta->arg2_type) {
   case ARG_R8:
     val = meta->arg2_value;
     break;
+
   case ARG_N8:
     val = opdata[0];
     break;
+
   case ARG_N16:
     // Read little endian opdata
     val = (opdata[1] << 8) | opdata[0];
     break;
+
+  case ARG_R8_DREF:
+    // ARG_R8_DREF is only used for OP_LDH and only ever with R8_C
+    mmu_read(core->mmu, 0xFF00 | core->cpu->c);
+    break;
+
   case ARG_R16_DREF:
     
     // Probably extract this to a method
@@ -49,6 +58,7 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
     }
     val = mmu_read(core->mmu, addr2);
     break;
+
   case ARG_A16:
     // basically what an ARG_N16_DREF would be
     val = mmu_read(core->mmu, (opdata[1] << 8) | opdata[0]);
@@ -112,6 +122,11 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
     default: 
       return ERR_LD_ARG1_VAL;
     }
+    break;
+
+  case ARG_R8_DREF:
+    // ARG_R8_DREF is only used for OP_LDH and only ever with R8_C
+    mmu_write(core->mmu, 0xFF00 | core->cpu->c, val);
     break;
 
   case ARG_R16_DREF:
