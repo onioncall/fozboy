@@ -1,5 +1,31 @@
 #include "handlers.h"
 
+int get_r16(core_t *core, cpu_registers_16bit_enum reg, uint16_t *buf) {
+  switch (reg) {
+  case R16_AF:
+    // This case isn't going to ever be hit by a LD 
+    // but leaving in case I copy and paste this to a generic method
+    *buf = (core->cpu->a << 8) | core->cpu->f;
+    break;
+  case R16_BC:
+    *buf = (core->cpu->b << 8) | core->cpu->c;
+    break;
+  case R16_DE:
+    *buf = (core->cpu->d << 8) | core->cpu->e;
+    break;
+  case R16_HL:
+    *buf = (core->cpu->h <<8) | core->cpu->l;
+    break;
+  case R16_SP:
+    *buf = core->cpu->sp;
+    break;
+
+  default:
+    return 1;
+  }
+  return 0;
+}
+
 ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8_t opdata[]) {
   uint16_t addr1;
   uint16_t addr2;
@@ -22,41 +48,40 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
 
   case ARG_R8_DREF:
     // ARG_R8_DREF is only used for OP_LDH and only ever with R8_C
-    mmu_read(core->mmu, 0xFF00 | core->cpu->c);
+    val = mmu_read(core->mmu, 0xFF00 | core->cpu->c);
     break;
 
   case ARG_R16_DREF:
-    
-    // Probably extract this to a method
-    switch (meta->arg2_value) {
-    case R16_AF:
-      // This case isn't going to ever be hit by a LD 
-      // but leaving in case I copy and paste this to a generic method
-      addr2 = (core->cpu->a << 8) | core->cpu->f;
-      break;
-    case R16_BC:
-      addr2 = (core->cpu->b << 8) | core->cpu->c;
-      break;
-    case R16_DE:
-      addr2 = (core->cpu->d << 8) | core->cpu->e;
-      break;
-    case R16_HL:
-      addr2 = (core->cpu->h <<8) | core->cpu->l;
-      break;
-    case R16_SP:
-      addr2 = core->cpu->sp;
 
-      if (opcode == 0xF8) {
-        // Literally one opcode has 3 operands in Opcodes.json 
-        // and doesn't fit the schema
-        // I am not modifying the generation script and schema for this
-        addr2 += (int8_t)opdata[0];
-      }
-      break;
-    default:
+    if (get_r16(core, meta->arg2_value, &addr2) != 0) {
       return ERR_LD_ARG2_VAL;
     }
+
     val = mmu_read(core->mmu, addr2);
+    break;
+
+  case ARG_R16:
+
+    if (get_r16(core, meta->arg2_value, &val) != 0) {
+      return ERR_LD_ARG2_VAL;
+    }
+    if (opcode == 0xF8) {
+      // Literally one opcode has 3 operands in Opcodes.json 
+      // and doesn't fit the schema
+      // I am not modifying the generation script and schema for this
+      val += (int8_t)opdata[0];
+
+      // It's also the only load that sets flags
+      // Hate this opcode
+      core->cpu->f = 0;
+      if ((core->cpu->sp & 0xF) + (opdata[0] & 0xF) > 0xF) {
+        core->cpu->f |= 0x20;
+      }
+      if ((core->cpu->sp & 0xFF) + (opdata[0] & 0xFF) > 0xFF) {
+        core->cpu->f |= 0x10;
+      }
+    }
+
     break;
 
   case ARG_A16:
@@ -154,16 +179,14 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
 
   case ARG_A16:
     addr1 = opdata[0] | (opdata[1] << 8);
-    mmu_write(core->mmu, addr1, val);
+    mmu_write(core->mmu, addr1, val & 0xFF);
+    mmu_write(core->mmu, addr1 + 1, val >> 8);
     break;
 
   default:
     return ERR_LD_ARG1_TYPE;
   }
 
-
-  // TODO LDH?
-  
   // LDI and LDD always inc or dec the HL register
   if (meta->op == OP_LDI) {
       uint16_t hl_reg = (core->cpu->h <<8) | core->cpu->l;
@@ -182,4 +205,5 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
 
   //TODO do any loads set flags? the current instruction funcs don't set them
 
+  return ERR_LD_OK;
 }
