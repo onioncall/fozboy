@@ -1,5 +1,11 @@
 #include "handlers.h"
 
+typedef uint8_t FLAG_BIT;
+const FLAG_BIT FLAG_Z = 0x80;
+const FLAG_BIT FLAG_N = 0x40;
+const FLAG_BIT FLAG_H = 0x20;
+const FLAG_BIT FLAG_C = 0x10;
+
 int get_r16(core_t *core, cpu_registers_16bit_enum reg, uint16_t *buf) {
   switch (reg) {
   case R16_AF:
@@ -24,6 +30,10 @@ int get_r16(core_t *core, cpu_registers_16bit_enum reg, uint16_t *buf) {
     return 1;
   }
   return 0;
+}
+
+void set_flag(core_t *core, FLAG_BIT flag) {
+  core->cpu->f |= flag;
 }
 
 ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8_t opdata[]) {
@@ -75,10 +85,10 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
       // Hate this opcode
       core->cpu->f = 0;
       if ((core->cpu->sp & 0xF) + (opdata[0] & 0xF) > 0xF) {
-        core->cpu->f |= 0x20;
+        set_flag(core, FLAG_H);
       }
       if ((core->cpu->sp & 0xFF) + (opdata[0] & 0xFF) > 0xFF) {
-        core->cpu->f |= 0x10;
+        set_flag(core, FLAG_C);
       }
     }
 
@@ -201,9 +211,39 @@ ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8
       core->cpu->l = hl_reg;
   }
   
+  return ERR_LD_OK;
+}
 
+ERR_INC handle_inc(core_t *core, instruction_meta_t *meta) {
+  switch (meta->arg1_type) {
+  case ARG_R8:
+    switch (meta->arg1_value) {
+    case R8_A:
+      break;
 
-  //TODO do any loads set flags? the current instruction funcs don't set them
+    case R8_B:
+      break;
 
+    case R8_C:
+      break;
+
+    case R8_D:
+      break;
+
+    case R8_E:
+      break;
+
+    }
+
+    break;
+
+  case ARG_R16:
+
+    break;
+
+  case ARG_R16_DREF:
+
+    break;
+  }  
   return ERR_LD_OK;
 }

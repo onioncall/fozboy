@@ -12,6 +12,11 @@ typedef enum {
   ERR_LD_ARG2_VAL,
 } ERR_LD;
 
+typedef enum {
+  ERR_INC_OK = 0
+} ERR_INC;
+
 ERR_LD handle_load(core_t *core, instruction_meta_t *meta, uint8_t opcode, uint8_t opdata[]);
+ERR_INC handle_inc(core_t *core, instruction_meta_t *meta);
 
 #endif

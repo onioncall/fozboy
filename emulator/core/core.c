@@ -79,6 +79,7 @@ ERR_CORE run(core_t* core) {
     switch (meta->op) {
     case OP_NOP:
       break;
+
     case OP_LDI:
     case OP_LDD:
     case OP_LDH:
@@ -88,7 +89,15 @@ ERR_CORE run(core_t* core) {
         //TODO 
       }
       break;
+
+    case OP_INC:
+      ERR_INC err = handle_inc(core, meta);
+      if (err) {
+        //TODO
+      }
+      break;
     }
+      
 
     // Any other per-cycle handling ticks here
       // ex. apu, ppu, rtc
