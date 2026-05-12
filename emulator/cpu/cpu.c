@@ -27,8 +27,8 @@ void cpu_init(Cpu *cpu) {
 	cpu->f = 0;
 	cpu->h = 0;
 	cpu->l = 0;
-	cpu->sp = 0;
-	cpu->pc = 0;
+	cpu->sp = 0xFFFE; // stack starts at top of WRAM and grows backwards
+	cpu->pc = 0x0100; // no need to read from 0, game instructions start at $0100
 	cpu->ime = false;
 	cpu->halted = false;
 }
